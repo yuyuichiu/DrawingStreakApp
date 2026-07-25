@@ -35,7 +35,8 @@ export const NotificationService = {
     // Schedule for the next MAX_PRESCHEDULED_ALERTS days
     for (let i = 0; i < CONFIG.MAX_PRESCHEDULED_ALERTS; i++) {
         const dayOffset = i * 24 * 60 * 60 * 1000;
-        const currentCutoffTime = nextCutoff.getTime() - (24 * 60 * 60 * 1000) + dayOffset;
+        // nextCutoff is the 4 AM cutoff for the CURRENT streak day.
+        const currentCutoffTime = nextCutoff.getTime() + dayOffset;
         
         // currentCutoffTime represents the cutoff for the "streak day"
         // Let's create a zoned date representing the calendar day of that cutoff minus 1 day, because the cutoff is at 4AM of the NEXT day.

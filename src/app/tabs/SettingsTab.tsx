@@ -5,6 +5,8 @@ import { AppDatabase } from "../../types";
 import { StreakService } from "../../services/streak";
 import { NotificationService } from "../../services/notifications";
 import { Toggle } from "../components/Toggle";
+import { NativeSettings, AndroidSettings, IOSSettings } from "capacitor-native-settings";
+import { Capacitor } from "@capacitor/core";
 
 export function SettingsTab({
   db,
@@ -21,6 +23,13 @@ export function SettingsTab({
   const streakResult = useMemo(() => StreakService.evaluateStreak(db.streak, db.lastActivityAt, timezone), [db, timezone]);
 
   const updateSetting = async <K extends keyof AppDatabase['settings']>(key: K, value: AppDatabase['settings'][K]) => {
+    if (key === 'notifications' && value === true) {
+      const granted = await NotificationService.requestPermissions();
+      if (!granted && Capacitor.getPlatform() !== 'web') {
+        alert("Notification permissions are required. Please enable them in your device settings.");
+        return;
+      }
+    }
     const newDb = { ...db, settings: { ...db.settings, [key]: value } };
     await updateDb(newDb);
     if (['notifications', 'morningAlert', 'eveningAlert', 'morningTime', 'eveningTime'].includes(key)) {
@@ -134,8 +143,16 @@ export function SettingsTab({
 
         {settings.notifications && (
           <div
-            className="flex gap-2 px-3 py-2.5 rounded-xl"
+            className="flex gap-2 px-3 py-2.5 rounded-xl cursor-pointer"
             style={{ background: "rgba(107,158,255,0.08)", border: "1px solid rgba(107,158,255,0.2)" }}
+            onClick={() => {
+              if (Capacitor.getPlatform() !== 'web') {
+                NativeSettings.open({
+                  optionAndroid: AndroidSettings.ApplicationDetails,
+                  optionIOS: IOSSettings.App
+                }).catch(console.error);
+              }
+            }}
           >
             <Bell size={14} style={{ color: "#6B9EFF", flexShrink: 0, marginTop: 1 }} />
             <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
