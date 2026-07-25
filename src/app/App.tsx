@@ -12,6 +12,8 @@ import { HomeTab } from "./tabs/HomeTab";
 import { UploadTab } from "./tabs/UploadTab";
 import { GalleryTab } from "./tabs/GalleryTab";
 import { SettingsTab } from "./tabs/SettingsTab";
+import { LandingPage } from "./components/LandingPage";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
@@ -62,38 +64,11 @@ export default function App() {
   }
 
   if (!signedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6" style={{ background: "#E8E2D9" }}>
-        <div className="bg-card p-8 rounded-3xl shadow-xl flex flex-col items-center max-w-sm w-full text-center">
-          <FlameIcon size={80} lit />
-          <h1 className="text-2xl font-extrabold mt-4 mb-2 text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Drawing Streak
-          </h1>
-          <p className="text-sm text-muted-foreground mb-8" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Connect Google Drive to securely back up your drawings and track your streak.
-          </p>
-          <button
-            onClick={handleSignIn}
-            className="w-full py-3 rounded-2xl font-bold text-primary-foreground shadow flex items-center justify-center gap-2 transition-all active:scale-95"
-            style={{ background: "var(--primary)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            Sign in with Google
-          </button>
-        </div>
-      </div>
-    );
+    return <LandingPage onSignIn={handleSignIn} />;
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6" style={{ background: "#E8E2D9" }}>
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full"
-        />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   const todayDone = db ? StreakService.evaluateStreak(db.streak, db.lastActivityAt, timezone).status === 'ALREADY_COMPLETED_TODAY' : false;
