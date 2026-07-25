@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DrawingStreak</string>
+    <string name="title_activity_main">DrawingStreak</string>
+    <string name="package_name">com.daveyu.drawingstreak</string>
+    <string name="custom_url_scheme">com.daveyu.drawingstreak</string>
+    <string name="server_client_id">1084219032402-rrivskg655pc2hmjtaav6vj81lnoosa3.apps.googleusercontent.com</string>
+</resources>

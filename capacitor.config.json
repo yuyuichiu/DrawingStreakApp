@@ -1,0 +1,13 @@
+{
+  "appId": "com.daveyu.drawingstreak",
+  "appName": "DrawingStreakApp",
+  "webDir": "dist",
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email", "https://www.googleapis.com/auth/drive.file"],
+      "serverClientId": "1084219032402-rrivskg655pc2hmjtaav6vj81lnoosa3.apps.googleusercontent.com",
+      "androidClientId": "1084219032402-cah76l3vf5ahh6nubutnah2hhknej7bk.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
+}
