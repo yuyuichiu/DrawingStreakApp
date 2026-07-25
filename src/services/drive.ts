@@ -5,7 +5,7 @@ import { CONFIG } from '../config';
 if (Capacitor.isNativePlatform()) {
   GoogleAuth.initialize({
     clientId: CONFIG.OAUTH_CLIENT_ID_WEB,
-    scopes: ['https://www.googleapis.com/auth/drive.file'],
+    scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file'],
     grantOfflineAccess: true,
   });
 }
@@ -17,7 +17,7 @@ const initWebAuth = () => {
   if (!Capacitor.isNativePlatform() && !tokenClient && (window as any).google) {
     tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
       client_id: CONFIG.OAUTH_CLIENT_ID_WEB,
-      scope: 'https://www.googleapis.com/auth/drive.file',
+      scope: 'profile email https://www.googleapis.com/auth/drive.file',
       callback: (tokenResponse: any) => {
         if (tokenResponse && tokenResponse.access_token) {
           webAccessToken = tokenResponse.access_token;
@@ -49,7 +49,7 @@ export const DriveService = {
             reject(tokenResponse);
           }
           webAccessToken = tokenResponse.access_token;
-          resolve({ id: 'web-user', name: 'Web User' }); // Return dummy user since we just need the token
+          resolve({ id: 'web-user', name: 'Web User' }); // We will fetch real profile later
         };
         tokenClient.requestAccessToken();
       });
@@ -86,6 +86,20 @@ export const DriveService = {
       }
       throw new Error("No web access token available. Please sign in again.");
     }
+  },
+
+  async getUserProfile(token: string): Promise<{ name?: string; picture?: string; email?: string } | null> {
+    try {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.error("Failed to fetch user profile", e);
+    }
+    return null;
   },
 
   async getOrCreateAppFolder(token: string): Promise<string> {

@@ -9,10 +9,12 @@ import { CalendarModal } from "../components/CalendarModal";
 export function HomeTab({
   db,
   timezone,
+  userProfile,
   onUpload,
 }: {
   db: AppDatabase;
   timezone: string;
+  userProfile?: { name?: string; picture?: string } | null;
   onUpload: () => void;
 }) {
   const [showCalendar, setShowCalendar] = useState(false);
@@ -65,6 +67,9 @@ export function HomeTab({
 
   const todayString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   const isPending = streakResult.status !== 'ALREADY_COMPLETED_TODAY';
+  
+  const displayName = userProfile?.name ? userProfile.name.split(' ')[0] : "Artist";
+  const avatarInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <motion.div
@@ -84,11 +89,15 @@ export function HomeTab({
             className="text-2xl font-extrabold text-foreground mt-0.5 leading-tight"
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
-            Keep creating,{"\n"}Artist.
+            Keep creating,{"\n"}{displayName}.
           </h1>
         </div>
         <div className="relative w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-          <span className="text-lg font-bold text-accent" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>A</span>
+          {userProfile?.picture ? (
+            <img src={userProfile.picture} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-lg font-bold text-accent" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{avatarInitial}</span>
+          )}
         </div>
       </div>
 

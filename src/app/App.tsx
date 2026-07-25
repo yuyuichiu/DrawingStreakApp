@@ -20,11 +20,16 @@ export default function App() {
   const { db, isLoading, updateDb, reload } = useSync();
   const { timezone, saveTimezone } = useTimezone();
   const [signedIn, setSignedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ name?: string; picture?: string } | null>(null);
 
   useEffect(() => {
     DriveService.getAccessToken()
-      .then((token) => {
-        if (token) setSignedIn(true);
+      .then(async (token) => {
+        if (token) {
+          setSignedIn(true);
+          const profile = await DriveService.getUserProfile(token);
+          if (profile) setUserProfile(profile);
+        }
       })
       .catch(() => setSignedIn(false));
   }, []);
@@ -32,6 +37,9 @@ export default function App() {
   const handleSignIn = async () => {
     try {
       await DriveService.signIn();
+      const token = await DriveService.getAccessToken();
+      const profile = await DriveService.getUserProfile(token);
+      if (profile) setUserProfile(profile);
       setSignedIn(true);
       reload();
     } catch (e) {
@@ -82,7 +90,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto pb-24" style={{ scrollbarWidth: "none" }}>
           <AnimatePresence mode="wait">
             {tab === "home" && (
-              <HomeTab key="home" db={db!} timezone={timezone} onUpload={() => setTab("upload")} />
+              <HomeTab key="home" db={db!} timezone={timezone} userProfile={userProfile} onUpload={() => setTab("upload")} />
             )}
             {tab === "upload" && (
               <UploadTab
