@@ -57,110 +57,112 @@ export function SettingsTab({
       </h1>
 
       {/* Notifications */}
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Streak Alerts
-        </p>
-        <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-          {/* Master toggle */}
-          <div
-            className="flex items-center gap-3 px-4 py-3.5"
-            style={{ background: "var(--card)", borderBottom: "1px solid var(--border)" }}
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,107,43,0.1)" }}>
-              {settings.notifications ? (
-                <Bell size={18} style={{ color: "var(--primary)" }} />
-              ) : (
-                <BellOff size={18} style={{ color: "var(--muted-foreground)" }} />
-              )}
+      {Capacitor.getPlatform() !== 'web' && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Streak Alerts
+          </p>
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {/* Master toggle */}
+            <div
+              className="flex items-center gap-3 px-4 py-3.5"
+              style={{ background: "var(--card)", borderBottom: "1px solid var(--border)" }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,107,43,0.1)" }}>
+                {settings.notifications ? (
+                  <Bell size={18} style={{ color: "var(--primary)" }} />
+                ) : (
+                  <BellOff size={18} style={{ color: "var(--muted-foreground)" }} />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Push notifications
+                </p>
+                <p className="text-xs text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Like Duolingo — never miss a day
+                </p>
+              </div>
+              <Toggle on={settings.notifications} onToggle={() => updateSetting('notifications', !settings.notifications)} />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Push notifications
-              </p>
-              <p className="text-xs text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Like Duolingo — never miss a day
-              </p>
+
+            {/* Morning alert */}
+            <div
+              className="flex items-center gap-3 px-4 py-3.5 transition-opacity"
+              style={{
+                background: "var(--card)",
+                borderBottom: "1px solid var(--border)",
+                opacity: settings.notifications ? 1 : 0.4,
+                pointerEvents: settings.notifications ? "auto" : "none",
+              }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg">
+                🌅
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Morning reminder
+                </p>
+                <input
+                  type="time"
+                  value={settings.morningTime}
+                  onChange={(e) => updateSetting('morningTime', e.target.value)}
+                  className="text-xs mt-0.5 bg-transparent border-none outline-none"
+                  style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
+                />
+              </div>
+              <Toggle on={settings.morningAlert} onToggle={() => updateSetting('morningAlert', !settings.morningAlert)} />
             </div>
-            <Toggle on={settings.notifications} onToggle={() => updateSetting('notifications', !settings.notifications)} />
+
+            {/* Evening alert */}
+            <div
+              className="flex items-center gap-3 px-4 py-3.5 transition-opacity"
+              style={{
+                background: "var(--card)",
+                opacity: settings.notifications ? 1 : 0.4,
+                pointerEvents: settings.notifications ? "auto" : "none",
+              }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg">
+                🌙
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Evening nudge
+                </p>
+                <input
+                  type="time"
+                  value={settings.eveningTime}
+                  onChange={(e) => updateSetting('eveningTime', e.target.value)}
+                  className="text-xs mt-0.5 bg-transparent border-none outline-none"
+                  style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
+                />
+              </div>
+              <Toggle on={settings.eveningAlert} onToggle={() => updateSetting('eveningAlert', !settings.eveningAlert)} />
+            </div>
           </div>
 
-          {/* Morning alert */}
-          <div
-            className="flex items-center gap-3 px-4 py-3.5 transition-opacity"
-            style={{
-              background: "var(--card)",
-              borderBottom: "1px solid var(--border)",
-              opacity: settings.notifications ? 1 : 0.4,
-              pointerEvents: settings.notifications ? "auto" : "none",
-            }}
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg">
-              🌅
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Morning reminder
+          {settings.notifications && (
+            <div
+              className="flex gap-2 px-3 py-2.5 rounded-xl cursor-pointer"
+              style={{ background: "rgba(107,158,255,0.08)", border: "1px solid rgba(107,158,255,0.2)" }}
+              onClick={() => {
+                if (Capacitor.getPlatform() !== 'web') {
+                  NativeSettings.open({
+                    optionAndroid: AndroidSettings.ApplicationDetails,
+                    optionIOS: IOSSettings.App
+                  }).catch(console.error);
+                }
+              }}
+            >
+              <Bell size={14} style={{ color: "#6B9EFF", flexShrink: 0, marginTop: 1 }} />
+              <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                On Android, go to <strong className="text-foreground">App Info → Notifications</strong> to manage delivery. Honor 400 Pro may require disabling battery optimization for timely alerts.
               </p>
-              <input
-                type="time"
-                value={settings.morningTime}
-                onChange={(e) => updateSetting('morningTime', e.target.value)}
-                className="text-xs mt-0.5 bg-transparent border-none outline-none"
-                style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
-              />
             </div>
-            <Toggle on={settings.morningAlert} onToggle={() => updateSetting('morningAlert', !settings.morningAlert)} />
-          </div>
-
-          {/* Evening alert */}
-          <div
-            className="flex items-center gap-3 px-4 py-3.5 transition-opacity"
-            style={{
-              background: "var(--card)",
-              opacity: settings.notifications ? 1 : 0.4,
-              pointerEvents: settings.notifications ? "auto" : "none",
-            }}
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg">
-              🌙
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                Evening nudge
-              </p>
-              <input
-                type="time"
-                value={settings.eveningTime}
-                onChange={(e) => updateSetting('eveningTime', e.target.value)}
-                className="text-xs mt-0.5 bg-transparent border-none outline-none"
-                style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
-              />
-            </div>
-            <Toggle on={settings.eveningAlert} onToggle={() => updateSetting('eveningAlert', !settings.eveningAlert)} />
-          </div>
+          )}
         </div>
-
-        {settings.notifications && (
-          <div
-            className="flex gap-2 px-3 py-2.5 rounded-xl cursor-pointer"
-            style={{ background: "rgba(107,158,255,0.08)", border: "1px solid rgba(107,158,255,0.2)" }}
-            onClick={() => {
-              if (Capacitor.getPlatform() !== 'web') {
-                NativeSettings.open({
-                  optionAndroid: AndroidSettings.ApplicationDetails,
-                  optionIOS: IOSSettings.App
-                }).catch(console.error);
-              }
-            }}
-          >
-            <Bell size={14} style={{ color: "#6B9EFF", flexShrink: 0, marginTop: 1 }} />
-            <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-              On Android, go to <strong className="text-foreground">App Info → Notifications</strong> to manage delivery. Honor 400 Pro may require disabling battery optimization for timely alerts.
-            </p>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* App info */}
       <div className="flex flex-col gap-2">
