@@ -140,8 +140,39 @@ export function SettingsTab({
               </div>
               <Toggle on={settings.eveningAlert} onToggle={() => updateSetting('eveningAlert', !settings.eveningAlert)} />
             </div>
-          </div>
 
+            {/* Test Notification */}
+            <div
+              className="flex items-center gap-3 px-4 py-3.5 transition-opacity cursor-pointer"
+              style={{
+                background: "var(--card)",
+                opacity: settings.notifications ? 1 : 0.4,
+                pointerEvents: settings.notifications ? "auto" : "none",
+              }}
+              onClick={async () => {
+                if (!settings.notifications) return;
+                const granted = await NotificationService.requestPermissions();
+                if (granted) {
+                  NotificationService.testNotification();
+                  alert("Test notification scheduled! You may need to minimize the app to see it pop up.");
+                } else {
+                  alert("Notification permissions not granted.");
+                }
+              }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg">
+                🔔
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  Test notification
+                </p>
+                <p className="text-xs text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Send a test alert now
+                </p>
+              </div>
+            </div>
+          </div>
           {settings.notifications && (
             <div
               className="flex gap-2 px-3 py-2.5 rounded-xl cursor-pointer"

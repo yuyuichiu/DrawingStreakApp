@@ -46,12 +46,13 @@ export const NotificationService = {
         
         const year = zonedCutoff.getFullYear();
         const month = zonedCutoff.getMonth();
-        const date = zonedCutoff.getDate() - 1; // The day before the 4 AM cutoff
+        const cutoffDateNum = zonedCutoff.getDate();
         
         // 1. Morning Alert
         if (settings.morningAlert && settings.morningTime) {
             const [hour, minute] = settings.morningTime.split(':').map(Number);
-            const zonedMorning = new Date(year, month, date, hour, minute, 0, 0);
+            const alertDateNum = hour >= 4 ? cutoffDateNum - 1 : cutoffDateNum;
+            const zonedMorning = new Date(year, month, alertDateNum, hour, minute, 0, 0);
             const morningDate = fromZonedTime(zonedMorning, timezone);
             
             if (morningDate.getTime() > Date.now()) {
@@ -67,7 +68,8 @@ export const NotificationService = {
         // 2. Evening Alert
         if (settings.eveningAlert && settings.eveningTime) {
             const [hour, minute] = settings.eveningTime.split(':').map(Number);
-            const zonedEvening = new Date(year, month, date, hour, minute, 0, 0);
+            const alertDateNum = hour >= 4 ? cutoffDateNum - 1 : cutoffDateNum;
+            const zonedEvening = new Date(year, month, alertDateNum, hour, minute, 0, 0);
             const eveningDate = fromZonedTime(zonedEvening, timezone);
             
             if (eveningDate.getTime() > Date.now()) {
@@ -86,5 +88,25 @@ export const NotificationService = {
     if (notificationsToSchedule.length > 0) {
         await LocalNotifications.schedule({ notifications: notificationsToSchedule });
     }
+  },
+
+  async testNotification() {
+    if (Capacitor.getPlatform() === 'web') {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new window.Notification('Test Notification', { body: 'This is a test notification. Notifications are working!' });
+      } else {
+        alert("Notification permissions not granted or not supported on web.");
+      }
+      return;
+    }
+    
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 99999,
+        title: 'Test Notification',
+        body: 'This is a test notification. Mobile notifications are working!',
+        schedule: { at: new Date(Date.now() + 1000) } // Schedule for 1 second in the future
+      }]
+    });
   }
 };
