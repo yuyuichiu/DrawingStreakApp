@@ -5,18 +5,17 @@ import { AppDatabase } from "../../types";
 import { StreakService } from "../../services/streak";
 import { FlameIcon } from "../components/FlameIcon";
 import { CalendarModal } from "../components/CalendarModal";
+import { useAppContext } from "../../hooks/AppContext";
 
 export function HomeTab({
-  db,
-  timezone,
   userProfile,
   onUpload,
 }: {
-  db: AppDatabase;
-  timezone: string;
   userProfile?: { name?: string; picture?: string } | null;
   onUpload: () => void;
 }) {
+  const { db: contextDb, timezone } = useAppContext();
+  const db = contextDb!;
   const [showCalendar, setShowCalendar] = useState(false);
   const streakResult = useMemo(() => StreakService.evaluateStreak(db.streak, db.lastActivityAt, timezone), [db, timezone]);
   const currentStreak = streakResult.streak;

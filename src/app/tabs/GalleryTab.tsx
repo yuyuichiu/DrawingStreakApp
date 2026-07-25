@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from "motion/react";
 import { Search, BookOpen, X } from "lucide-react";
 import { Drawing } from "../../types";
 import { DriveImage } from "../components/DriveImage";
+import { useAppContext } from "../../hooks/AppContext";
 
-export function GalleryTab({ drawings }: { drawings: Drawing[] }) {
+export function GalleryTab() {
+  const { db } = useAppContext();
+  const drawings = db!.drawings;
   const [selected, setSelected] = useState<Drawing | null>(null);
   const [search, setSearch] = useState("");
 

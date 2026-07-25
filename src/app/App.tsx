@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useSync } from "../hooks/useSync";
-import { useTimezone } from "../hooks/useTimezone";
+import { useAppContext } from "../hooks/AppContext";
 import { DriveService } from "../services/drive";
 import { StreakService } from "../services/streak";
 import { NotificationService } from "../services/notifications";
@@ -17,8 +16,7 @@ import { LoadingScreen } from "./components/LoadingScreen";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
-  const { db, isLoading, updateDb, reload } = useSync();
-  const { timezone, saveTimezone } = useTimezone();
+  const { db, isLoading, reload, timezone } = useAppContext();
   const [signedIn, setSignedIn] = useState(false);
   const [userProfile, setUserProfile] = useState<{ name?: string; picture?: string } | null>(null);
 
@@ -90,25 +88,18 @@ export default function App() {
         <div className="flex-1 overflow-y-auto pb-24" style={{ scrollbarWidth: "none" }}>
           <AnimatePresence mode="wait">
             {tab === "home" && (
-              <HomeTab key="home" db={db!} timezone={timezone} userProfile={userProfile} onUpload={() => setTab("upload")} />
+              <HomeTab key="home" userProfile={userProfile} onUpload={() => setTab("upload")} />
             )}
             {tab === "upload" && (
               <UploadTab
                 key="upload"
-                db={db!}
-                updateDb={updateDb}
-                timezone={timezone}
-                driveLink={db?.settings.driveFolderLink || ""}
                 onComplete={() => setTab("home")}
               />
             )}
-            {tab === "gallery" && <GalleryTab key="gallery" drawings={db!.drawings} />}
+            {tab === "gallery" && <GalleryTab key="gallery" />}
             {tab === "settings" && (
               <SettingsTab
                 key="settings"
-                db={db!}
-                updateDb={updateDb}
-                timezone={timezone}
                 onSignOut={handleSignOut}
               />
             )}

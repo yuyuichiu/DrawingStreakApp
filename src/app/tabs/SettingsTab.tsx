@@ -7,18 +7,15 @@ import { NotificationService } from "../../services/notifications";
 import { Toggle } from "../components/Toggle";
 import { NativeSettings, AndroidSettings, IOSSettings } from "capacitor-native-settings";
 import { Capacitor } from "@capacitor/core";
+import { useAppContext } from "../../hooks/AppContext";
 
 export function SettingsTab({
-  db,
-  updateDb,
-  timezone,
   onSignOut,
 }: {
-  db: AppDatabase;
-  updateDb: (db: AppDatabase) => Promise<void>;
-  timezone: string;
   onSignOut: () => void;
 }) {
+  const { db: contextDb, updateDb, timezone } = useAppContext();
+  const db = contextDb!;
   const { settings } = db;
   const streakResult = useMemo(() => StreakService.evaluateStreak(db.streak, db.lastActivityAt, timezone), [db, timezone]);
 
@@ -175,21 +172,35 @@ export function SettingsTab({
           </div>
           {settings.notifications && (
             <div
-              className="flex gap-2 px-3 py-2.5 rounded-xl cursor-pointer"
+              className="flex flex-col gap-3 px-4 py-3.5 rounded-xl"
               style={{ background: "rgba(107,158,255,0.08)", border: "1px solid rgba(107,158,255,0.2)" }}
-              onClick={() => {
-                if (Capacitor.getPlatform() !== 'web') {
-                  NativeSettings.open({
-                    optionAndroid: AndroidSettings.ApplicationDetails,
-                    optionIOS: IOSSettings.App
-                  }).catch(console.error);
-                }
-              }}
             >
-              <Bell size={14} style={{ color: "#6B9EFF", flexShrink: 0, marginTop: 1 }} />
-              <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-                On Android, go to <strong className="text-foreground">App Info → Notifications</strong> to manage delivery. Honor 400 Pro may require disabling battery optimization for timely alerts.
-              </p>
+              <div className="flex gap-2">
+                <Bell size={16} style={{ color: "#6B9EFF", flexShrink: 0, marginTop: 2 }} />
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    To ensure timely alerts on Android:
+                  </p>
+                  <ul className="text-xs text-muted-foreground leading-relaxed list-disc pl-4 space-y-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    <li>Go to <strong className="text-foreground">App Info → Notifications</strong> and allow notifications.</li>
+                    <li>Go to <strong className="text-foreground">App Info → Battery</strong> and select <strong>Unrestricted</strong> (or disable battery optimization).</li>
+                  </ul>
+                </div>
+              </div>
+              <button
+                className="self-start px-3 py-1.5 rounded-lg text-xs font-semibold mt-1 transition-colors"
+                style={{ background: "rgba(107,158,255,0.15)", color: "#6B9EFF", border: "1px solid rgba(107,158,255,0.3)" }}
+                onClick={() => {
+                  if (Capacitor.getPlatform() !== 'web') {
+                    NativeSettings.open({
+                      optionAndroid: AndroidSettings.ApplicationDetails,
+                      optionIOS: IOSSettings.App
+                    }).catch(console.error);
+                  }
+                }}
+              >
+                Go to App Settings
+              </button>
             </div>
           )}
         </div>

@@ -24,6 +24,7 @@ export interface AppDatabase {
   lastActivityAt: string | null;
   settings: Settings;
   drawings: Drawing[];
+  updatedAt?: number;
 }
 
 export const DEFAULT_DB: AppDatabase = {
@@ -38,5 +39,6 @@ export const DEFAULT_DB: AppDatabase = {
     eveningTime: "20:00",
     driveFolderLink: ""
   },
-  drawings: []
+  drawings: [],
+  updatedAt: Date.now()
 };

@@ -1,25 +1,21 @@
 import React, { useState, useRef, useMemo } from "react";
 import { motion } from "motion/react";
 import { ImageIcon, X, Paperclip, Plus, FolderOpen, Upload } from "lucide-react";
-import { AppDatabase, Drawing } from "../../types";
+import { useAppContext } from "../../hooks/AppContext";
+import { Drawing } from "../../types";
 import { DriveService } from "../../services/drive";
 import { StreakService } from "../../services/streak";
 import { NotificationService } from "../../services/notifications";
 import { FlameIcon } from "../components/FlameIcon";
 
 export function UploadTab({
-  db,
-  timezone,
-  updateDb,
-  driveLink,
   onComplete,
 }: {
-  db: AppDatabase;
-  timezone: string;
-  updateDb: (db: AppDatabase) => Promise<void>;
-  driveLink: string;
   onComplete: () => void;
 }) {
+  const { db: contextDb, updateDb, timezone } = useAppContext();
+  const db = contextDb!;
+  const driveLink = db.settings.driveFolderLink || "";
   const [drawing, setDrawing] = useState<File | null>(null);
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
   const [supplements, setSupplements] = useState<File[]>([]);
@@ -121,6 +117,28 @@ export function UploadTab({
     }
   };
 
+  if (submitting) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center min-h-[70vh] gap-4 px-8"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-12 h-12 border-4 border-[rgba(255,107,43,0.3)] border-t-[#FF6B2B] rounded-full"
+        />
+        <h2 className="text-xl font-bold text-foreground mt-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Uploading drawing...
+        </h2>
+        <p className="text-sm text-muted-foreground text-center" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Saving securely to your Google Drive. This may take a moment.
+        </p>
+      </motion.div>
+    );
+  }
+
   if (done) {
     return (
       <motion.div
@@ -142,7 +160,7 @@ export function UploadTab({
           Streak kept! 🎉
         </h2>
         <p className="text-sm text-muted-foreground text-center" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Day {currentStreak + 1} complete. Your drawing has been saved.
+          Day {streakResult.status === 'ALREADY_COMPLETED_TODAY' ? currentStreak : currentStreak + 1} complete. Your drawing has been saved.
         </p>
       </motion.div>
     );

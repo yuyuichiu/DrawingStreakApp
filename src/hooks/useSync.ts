@@ -40,11 +40,19 @@ export const useSync = () => {
   }, []);
 
   const updateDb = async (newDb: AppDatabase) => {
+    newDb.updatedAt = Date.now();
     setDb(newDb);
     // Optimistic update locally
     await Preferences.set({ key: 'db_json_cache', value: JSON.stringify(newDb) });
     // Upload to drive
     try {
+        const remoteDb = await DriveService.fetchDbJson();
+        if (remoteDb && remoteDb.updatedAt && newDb.updatedAt && remoteDb.updatedAt > newDb.updatedAt) {
+          console.warn("Remote database is newer, pulling remote changes instead of overwriting.");
+          setDb(remoteDb);
+          await Preferences.set({ key: 'db_json_cache', value: JSON.stringify(remoteDb) });
+          return;
+        }
         await DriveService.saveDbJson(newDb);
     } catch(e) {
         console.error("Failed to sync to drive", e);
