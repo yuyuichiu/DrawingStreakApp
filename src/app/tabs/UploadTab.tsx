@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import { ImageIcon, X, Paperclip, Plus, FolderOpen, Upload } from "lucide-react";
 import { useAppContext } from "../../hooks/AppContext";
-import { Drawing } from "../../types";
+import { AppDatabase, Drawing } from "../../types";
 import { DriveService } from "../../services/drive";
 import { StreakService } from "../../services/streak";
 import { NotificationService } from "../../services/notifications";
@@ -20,7 +20,7 @@ export function UploadTab({
   const [drawing, setDrawing] = useState<File | null>(null);
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
   const [supplements, setSupplements] = useState<File[]>([]);
-  const [existingSupplements, setExistingSupplements] = useState<{id: string, name: string, url: string}[]>([]);
+  const [existingSupplements, setExistingSupplements] = useState<{ id: string, name: string, url: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [dragOver, setDragOver] = useState(false);

@@ -32,6 +32,18 @@ export const NotificationService = {
     const nextCutoff = StreakService.getNextCutoffTime(timezone);
     const notificationsToSchedule = [];
     
+    const MORNING_MESSAGES = [
+      { title: '🎨 Your canvas awaits!', body: 'What will you create today?' },
+      { title: '✨ Time to draw!', body: 'Even a quick doodle counts towards your streak.' },
+      { title: '🌅 Good morning!', body: 'A quick 5-minute sketch is all it takes today.' }
+    ];
+
+    const EVENING_MESSAGES = [
+      { title: '🚨 Streak in Danger!', body: 'You have until 4 AM to save your drawing streak!' },
+      { title: '⏳ Your streak is waiting!', body: 'Take 5 minutes to draw something.' },
+      { title: '🌙 The night is young!', body: 'You still have time to draw before 4 AM.' }
+    ];
+
     // Schedule for the next MAX_PRESCHEDULED_ALERTS days
     for (let i = 0; i < CONFIG.MAX_PRESCHEDULED_ALERTS; i++) {
         const dayOffset = i * 24 * 60 * 60 * 1000;
@@ -56,10 +68,14 @@ export const NotificationService = {
             const morningDate = fromZonedTime(zonedMorning, timezone);
             
             if (morningDate.getTime() > Date.now()) {
+                const randomMsg = MORNING_MESSAGES[Math.floor(Math.random() * MORNING_MESSAGES.length)];
                 notificationsToSchedule.push({
                     id: i * 2 + 1,
-                    title: 'Time to draw!',
-                    body: 'Keep your streak going today.',
+                    title: randomMsg.title,
+                    body: randomMsg.body,
+                    smallIcon: 'ic_stat_draw',
+                    largeIcon: 'ic_launcher',
+                    iconColor: '#FF6B2B',
                     schedule: { at: morningDate }
                 });
             }
@@ -74,10 +90,14 @@ export const NotificationService = {
             
             if (eveningDate.getTime() > Date.now()) {
                 if (!(todayDone && i === 0)) {
+                    const randomMsg = EVENING_MESSAGES[Math.floor(Math.random() * EVENING_MESSAGES.length)];
                     notificationsToSchedule.push({
                         id: i * 2 + 2,
-                        title: '🚨 Streak in Danger!',
-                        body: 'You have until 4 AM to save your drawing streak!',
+                        title: randomMsg.title,
+                        body: randomMsg.body,
+                        smallIcon: 'ic_stat_draw',
+                        largeIcon: 'ic_launcher',
+                        iconColor: '#FF6B2B',
                         schedule: { at: eveningDate }
                     });
                 }
@@ -105,6 +125,9 @@ export const NotificationService = {
         id: 99999,
         title: 'Test Notification',
         body: 'This is a test notification. Mobile notifications are working!',
+        smallIcon: 'ic_stat_draw',
+        largeIcon: 'ic_launcher',
+        iconColor: '#FF6B2B',
         schedule: { at: new Date(Date.now() + 1000) } // Schedule for 1 second in the future
       }]
     });

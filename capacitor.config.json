@@ -3,6 +3,10 @@
   "appName": "DrawingStreakApp",
   "webDir": "dist",
   "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_draw",
+      "iconColor": "#FF6B2B"
+    },
     "GoogleAuth": {
       "scopes": ["https://www.googleapis.com/auth/drive.file"],
       "serverClientId": "1084219032402-rrivskg655pc2hmjtaav6vj81lnoosa3.apps.googleusercontent.com",
