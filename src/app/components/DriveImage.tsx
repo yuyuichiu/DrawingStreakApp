@@ -37,7 +37,10 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
             headers: { Authorization: `Bearer ${token}` }
           });
           if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-          const blob = await res.blob();
+          const rawBlob = await res.blob();
+          // Force image mime type in case Drive API returns application/octet-stream
+          const mimeType = rawBlob.type.startsWith('image/') ? rawBlob.type : 'image/jpeg';
+          const blob = new Blob([rawBlob], { type: mimeType });
           
           const base64DataUrl = await blobToBase64(blob);
           
@@ -61,7 +64,12 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
         if (imagePromises.has(fileId)) {
           imagePromises.delete(fileId);
         }
-        if (active) console.error("Failed to load image", e);
+        if (active) {
+          console.error("Failed to load image", e);
+          if (fallbackUrl) {
+            setSrc(fallbackUrl);
+          }
+        }
       }
     };
 
@@ -71,9 +79,22 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
     };
   }, [fileId]);
 
+  const handleError = () => {
+    // If the image fails to load, remove it from cache
+    Filesystem.deleteFile({
+      path: `img_cache_${fileId}.txt`,
+      directory: Directory.Cache
+    }).catch(() => {});
+    
+    // Fallback to the provided URL or just keep it broken
+    if (fallbackUrl && src !== fallbackUrl) {
+      setSrc(fallbackUrl);
+    }
+  };
+
   if (!src) {
     return <div className={`animate-pulse bg-secondary ${className || ''}`} style={style} />;
   }
 
-  return <img src={src} alt={alt} className={className} style={style} />;
+  return <img src={src} alt={alt} className={className} style={style} onError={handleError} />;
 }
