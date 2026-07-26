@@ -127,7 +127,7 @@ export function UploadTab({
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-[rgba(255,107,43,0.3)] border-t-[#FF6B2B] rounded-full"
+          className="w-12 h-12 border-4 border-[#FF6B2B]/30 border-t-[#FF6B2B] rounded-full"
         />
         <h2 className="text-xl font-bold text-foreground mt-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           Uploading drawing...

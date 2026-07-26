@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { DriveService } from "../../services/drive";
-
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { ImageOff } from "lucide-react";
 
 const imagePromises = new Map<string, Promise<string>>();
 
@@ -16,29 +16,51 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 
 export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fileId: string, fallbackUrl?: string, alt: string, className?: string, style?: any }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const elementRef = useRef<any>(null);
 
   useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    if (elementRef.current) observer.observe(elementRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
     let active = true;
+    const controller = new AbortController();
+
     const fetchImage = async () => {
       if (!imagePromises.has(fileId)) {
         const p = (async () => {
           try {
             const { data } = await Filesystem.readFile({
               path: `img_cache_${fileId}.txt`,
-              directory: Directory.Cache
+              directory: Directory.Cache,
+              encoding: Encoding.UTF8
             });
-            if (data && typeof data === 'string') return data;
+            if (data && typeof data === 'string' && data.startsWith('data:')) return data;
           } catch (e) {
             // Not in cache, proceed to fetch
           }
 
           const token = await DriveService.getAccessToken();
           const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal
           });
           if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
           const rawBlob = await res.blob();
-          // Force image mime type in case Drive API returns application/octet-stream
           const mimeType = rawBlob.type.startsWith('image/') ? rawBlob.type : 'image/jpeg';
           const blob = new Blob([rawBlob], { type: mimeType });
           
@@ -47,7 +69,8 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
           Filesystem.writeFile({
             path: `img_cache_${fileId}.txt`,
             data: base64DataUrl,
-            directory: Directory.Cache
+            directory: Directory.Cache,
+            encoding: Encoding.UTF8
           }).catch(console.error);
 
           return base64DataUrl;
@@ -59,16 +82,18 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
         const resultSrc = await imagePromises.get(fileId);
         if (active && resultSrc) {
           setSrc(resultSrc);
+          // Free memory from the Map after a short delay so concurrent requests still share the promise
+          setTimeout(() => {
+             if (imagePromises.has(fileId)) imagePromises.delete(fileId);
+          }, 500);
         }
-      } catch (e) {
+      } catch (e: any) {
         if (imagePromises.has(fileId)) {
           imagePromises.delete(fileId);
         }
-        if (active) {
+        if (active && e.name !== 'AbortError') {
           console.error("Failed to load image", e);
-          if (fallbackUrl) {
-            setSrc(fallbackUrl);
-          }
+          setHasError(true);
         }
       }
     };
@@ -76,25 +101,29 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
     fetchImage();
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [fileId]);
+  }, [fileId, isVisible]);
 
   const handleError = () => {
-    // If the image fails to load, remove it from cache
     Filesystem.deleteFile({
       path: `img_cache_${fileId}.txt`,
       directory: Directory.Cache
     }).catch(() => {});
-    
-    // Fallback to the provided URL or just keep it broken
-    if (fallbackUrl && src !== fallbackUrl) {
-      setSrc(fallbackUrl);
-    }
+    setHasError(true);
   };
 
-  if (!src) {
-    return <div className={`animate-pulse bg-secondary ${className || ''}`} style={style} />;
+  if (hasError) {
+    return (
+      <div ref={elementRef} className={`flex items-center justify-center bg-secondary text-muted-foreground ${className || ''}`} style={style}>
+        <ImageOff size={24} />
+      </div>
+    );
   }
 
-  return <img src={src} alt={alt} className={className} style={style} onError={handleError} />;
+  if (!src) {
+    return <div ref={elementRef} className={`animate-pulse bg-secondary ${className || ''}`} style={style} />;
+  }
+
+  return <img ref={elementRef} src={src} alt={alt} className={className} style={style} onError={handleError} />;
 }
