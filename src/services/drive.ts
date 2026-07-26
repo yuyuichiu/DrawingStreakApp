@@ -13,6 +13,7 @@ if (Capacitor.isNativePlatform()) {
 let webAccessToken = localStorage.getItem('webAccessToken') || '';
 let tokenExpiry = parseInt(localStorage.getItem('tokenExpiry') || '0', 10);
 let tokenClient: any = null;
+let webTokenPromise: Promise<string> | null = null;
 
 const initWebAuth = () => {
   if (!Capacitor.isNativePlatform() && !tokenClient && (window as any).google) {
@@ -98,16 +99,58 @@ export const DriveService = {
         throw e;
       }
     } else {
-      if (webAccessToken && Date.now() < tokenExpiry) {
+      if (webAccessToken && Date.now() < tokenExpiry - 60000) {
         return webAccessToken;
       }
+
+      if (webTokenPromise) {
+        return webTokenPromise;
+      }
       
-      // Token expired or not found
-      webAccessToken = '';
-      tokenExpiry = 0;
-      localStorage.removeItem('webAccessToken');
-      localStorage.removeItem('tokenExpiry');
-      throw new Error("No web access token available. Please sign in again.");
+      initWebAuth();
+      if (!tokenClient) {
+        throw new Error("Google Identity Services script not loaded. Please sign in again.");
+      }
+
+      webTokenPromise = new Promise((resolve, reject) => {
+        let isResolved = false;
+        tokenClient.callback = (tokenResponse: any) => {
+          isResolved = true;
+          if (tokenResponse.error !== undefined) {
+             webAccessToken = '';
+             tokenExpiry = 0;
+             localStorage.removeItem('webAccessToken');
+             localStorage.removeItem('tokenExpiry');
+             reject(new Error(tokenResponse.error));
+          } else {
+             webAccessToken = tokenResponse.access_token;
+             const expiresIn = tokenResponse.expires_in || 3600;
+             tokenExpiry = Date.now() + expiresIn * 1000;
+             localStorage.setItem('webAccessToken', webAccessToken);
+             localStorage.setItem('tokenExpiry', tokenExpiry.toString());
+             resolve(webAccessToken);
+          }
+        };
+        
+        tokenClient.requestAccessToken({ prompt: '' });
+        
+        setTimeout(() => {
+          if (!isResolved) {
+             webAccessToken = '';
+             tokenExpiry = 0;
+             localStorage.removeItem('webAccessToken');
+             localStorage.removeItem('tokenExpiry');
+             reject(new Error("Timeout waiting for token refresh. Popup may have been blocked."));
+          }
+        }, 5000);
+      });
+
+      try {
+        const token = await webTokenPromise;
+        return token;
+      } finally {
+        webTokenPromise = null;
+      }
     }
   },
 
