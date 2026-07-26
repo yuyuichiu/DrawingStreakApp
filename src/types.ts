@@ -10,6 +10,7 @@ export interface Drawing {
 export type Tab = "home" | "upload" | "gallery" | "settings";
 
 export interface Settings {
+  userName: string;
   notifications: boolean;
   morningAlert: boolean;
   eveningAlert: boolean;
@@ -32,6 +33,7 @@ export const DEFAULT_DB: AppDatabase = {
   longestStreak: 0,
   lastActivityAt: null,
   settings: {
+    userName: "",
     notifications: true,
     morningAlert: true,
     eveningAlert: true,

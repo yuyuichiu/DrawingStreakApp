@@ -13,20 +13,18 @@ import { GalleryTab } from "./tabs/GalleryTab";
 import { SettingsTab } from "./tabs/SettingsTab";
 import { LandingPage } from "./components/LandingPage";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { OnboardingModal } from "./components/OnboardingModal";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("home");
-  const { db, isLoading, reload, timezone } = useAppContext();
+  const { db, isLoading, reload, updateDb, timezone } = useAppContext();
   const [signedIn, setSignedIn] = useState(false);
-  const [userProfile, setUserProfile] = useState<{ name?: string; picture?: string } | null>(null);
 
   useEffect(() => {
     DriveService.getAccessToken()
-      .then(async (token) => {
+      .then((token) => {
         if (token) {
           setSignedIn(true);
-          const profile = await DriveService.getUserProfile(token);
-          if (profile) setUserProfile(profile);
         }
       })
       .catch(() => setSignedIn(false));
@@ -35,9 +33,7 @@ export default function App() {
   const handleSignIn = async () => {
     try {
       await DriveService.signIn();
-      const token = await DriveService.getAccessToken();
-      const profile = await DriveService.getUserProfile(token);
-      if (profile) setUserProfile(profile);
+      await DriveService.getAccessToken();
       setSignedIn(true);
       reload();
     } catch (e) {
@@ -88,7 +84,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto pb-24" style={{ scrollbarWidth: "none" }}>
           <AnimatePresence mode="wait">
             {tab === "home" && (
-              <HomeTab key="home" userProfile={userProfile} onUpload={() => setTab("upload")} />
+              <HomeTab key="home" onUpload={() => setTab("upload")} />
             )}
             {tab === "upload" && (
               <UploadTab
@@ -106,6 +102,13 @@ export default function App() {
           </AnimatePresence>
         </div>
         <BottomNav active={tab} onSelect={setTab} todayDone={todayDone} />
+        <AnimatePresence>
+          {db && !db.settings.userName && (
+            <OnboardingModal 
+              onSave={(name) => updateDb({ ...db, settings: { ...db.settings, userName: name } })} 
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

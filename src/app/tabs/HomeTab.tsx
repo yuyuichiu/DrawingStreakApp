@@ -8,10 +8,8 @@ import { CalendarModal } from "../components/CalendarModal";
 import { useAppContext } from "../../hooks/AppContext";
 
 export function HomeTab({
-  userProfile,
   onUpload,
 }: {
-  userProfile?: { name?: string; picture?: string } | null;
   onUpload: () => void;
 }) {
   const { db: contextDb, timezone } = useAppContext();
@@ -66,9 +64,8 @@ export function HomeTab({
 
   const todayString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   const isPending = streakResult.status !== 'ALREADY_COMPLETED_TODAY';
-  
-  const displayName = userProfile?.name ? userProfile.name.split(' ')[0] : "Artist";
-  const avatarInitial = displayName.charAt(0).toUpperCase();
+
+  const displayName = db.settings.userName || "Artist";
 
   return (
     <motion.div
@@ -79,25 +76,16 @@ export function HomeTab({
       className="px-5 pt-12 pb-6 flex flex-col gap-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-            {todayString}
-          </p>
-          <h1
-            className="text-2xl font-extrabold text-foreground mt-0.5 leading-tight"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            Keep creating,{"\n"}{displayName}.
-          </h1>
-        </div>
-        <div className="relative w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-          {userProfile?.picture ? (
-            <img src={userProfile.picture} alt={displayName} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-lg font-bold text-accent" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{avatarInitial}</span>
-          )}
-        </div>
+      <div className="flex flex-col">
+        <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+          {todayString}
+        </p>
+        <h1
+          className="text-2xl font-extrabold text-foreground mt-0.5 leading-tight break-words"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Keep creating, {displayName}.
+        </h1>
       </div>
 
       {/* Streak Hero */}

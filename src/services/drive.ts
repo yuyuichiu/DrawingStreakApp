@@ -5,7 +5,7 @@ import { CONFIG } from '../config';
 if (Capacitor.isNativePlatform()) {
   GoogleAuth.initialize({
     clientId: CONFIG.OAUTH_CLIENT_ID_WEB,
-    scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file'],
+    scopes: ['https://www.googleapis.com/auth/drive.file'],
     grantOfflineAccess: true,
   });
 }
@@ -18,7 +18,7 @@ const initWebAuth = () => {
   if (!Capacitor.isNativePlatform() && !tokenClient && (window as any).google) {
     tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
       client_id: CONFIG.OAUTH_CLIENT_ID_WEB,
-      scope: 'profile email https://www.googleapis.com/auth/drive.file',
+      scope: 'https://www.googleapis.com/auth/drive.file',
       callback: (tokenResponse: any) => {
         if (tokenResponse && tokenResponse.access_token) {
           webAccessToken = tokenResponse.access_token;
@@ -111,19 +111,7 @@ export const DriveService = {
     }
   },
 
-  async getUserProfile(token: string): Promise<{ name?: string; picture?: string; email?: string } | null> {
-    try {
-      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      console.error("Failed to fetch user profile", e);
-    }
-    return null;
-  },
+
 
   async getOrCreateAppFolder(token: string): Promise<string> {
     const q = `name='${CONFIG.DRIVE_FOLDER_PREFIX}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;

@@ -53,6 +53,26 @@ export function SettingsTab({
         Settings
       </h1>
 
+      {/* Profile */}
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Profile
+        </p>
+        <div className="rounded-2xl overflow-hidden px-4 py-3.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <p className="text-sm font-semibold text-foreground mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Display name
+          </p>
+          <input
+            type="text"
+            value={settings.userName}
+            onChange={(e) => updateSetting('userName', e.target.value)}
+            className="w-full text-sm mt-0.5 bg-transparent border-none outline-none"
+            style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
+            placeholder="Artist"
+          />
+        </div>
+      </div>
+
       {/* Notifications */}
       {Capacitor.getPlatform() !== 'web' && (
         <div className="flex flex-col gap-3">
