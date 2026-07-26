@@ -276,5 +276,52 @@ export const DriveService = {
       id: data.id,
       url: `https://drive.google.com/uc?export=view&id=${data.id}`
     };
+  },
+
+  async uploadSupplement(file: File) {
+    const token = await this.getAccessToken();
+    const folderId = await this.getOrCreateAppFolder(token);
+    
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const dateFolderId = await this.getOrCreateSubfolder(token, folderId, dateStr);
+    const supplementsFolderId = await this.getOrCreateSubfolder(token, dateFolderId, 'Supplements');
+
+    const metadata = {
+      name: file.name,
+      mimeType: file.type,
+      parents: [supplementsFolderId]
+    };
+    
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
+    
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,webContentLink,thumbnailLink', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: form
+    });
+    const data = await res.json();
+    
+    try {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    } catch (e) {
+      console.error("Could not set permission for supplement", e);
+    }
+
+    return {
+      id: data.id,
+      name: file.name,
+      url: `https://drive.google.com/uc?export=view&id=${data.id}`
+    };
   }
 };

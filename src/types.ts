@@ -5,6 +5,7 @@ export interface Drawing {
   title: string;
   tall: boolean; // Aspect ratio flag
   tags?: string[];
+  supplements?: { id: string, name: string, url: string }[];
 }
 
 export type Tab = "home" | "upload" | "gallery" | "settings";

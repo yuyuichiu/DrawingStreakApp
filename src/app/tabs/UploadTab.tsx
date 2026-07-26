@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import { ImageIcon, X, Paperclip, Plus, FolderOpen, Upload } from "lucide-react";
 import { useAppContext } from "../../hooks/AppContext";
@@ -7,6 +7,7 @@ import { DriveService } from "../../services/drive";
 import { StreakService } from "../../services/streak";
 import { NotificationService } from "../../services/notifications";
 import { FlameIcon } from "../components/FlameIcon";
+import { DriveImage } from "../components/DriveImage";
 
 export function UploadTab({
   onComplete,
@@ -19,10 +20,12 @@ export function UploadTab({
   const [drawing, setDrawing] = useState<File | null>(null);
   const [drawingPreview, setDrawingPreview] = useState<string | null>(null);
   const [supplements, setSupplements] = useState<File[]>([]);
+  const [existingSupplements, setExistingSupplements] = useState<{id: string, name: string, url: string}[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [tags, setTags] = useState("");
+  const [initialized, setInitialized] = useState(false);
 
   const drawingRef = useRef<HTMLInputElement>(null);
   const suppRef = useRef<HTMLInputElement>(null);
@@ -31,6 +34,22 @@ export function UploadTab({
   const currentStreak = streakResult.streak;
 
   const displayStreak = streakResult.status === 'ALREADY_COMPLETED_TODAY' ? currentStreak : currentStreak + 1;
+
+  const existingDrawing = useMemo(() => {
+    const todayStr = StreakService.getStreakDay(new Date(), timezone);
+    return db.drawings.find(d => StreakService.getStreakDay(new Date(d.date), timezone) === todayStr);
+  }, [db.drawings, timezone]);
+
+  useEffect(() => {
+    if (streakResult.status === 'ALREADY_COMPLETED_TODAY' && !initialized) {
+      if (existingDrawing) {
+        setDrawingPreview(existingDrawing.url);
+        setTags(existingDrawing.tags?.join(', ') || "");
+        setExistingSupplements(existingDrawing.supplements || []);
+      }
+      setInitialized(true);
+    }
+  }, [streakResult.status, existingDrawing, initialized]);
 
   const handleDrawing = (file: File) => {
     setDrawing(file);
@@ -61,11 +80,29 @@ export function UploadTab({
     e.target.value = '';
   };
 
+  const canSubmit = !!drawing || (!!existingDrawing && !!drawingPreview && drawingPreview === existingDrawing.url);
+
   const handleSubmit = async () => {
-    if (!drawing) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     try {
-      const uploaded = await DriveService.uploadDrawing(drawing, drawing.name);
+      let uploadedUrl = existingDrawing?.url || "";
+      let uploadedId = existingDrawing?.id || "";
+      let title = existingDrawing?.title || "Drawing";
+
+      if (drawing) {
+        const uploaded = await DriveService.uploadDrawing(drawing, drawing.name);
+        uploadedUrl = uploaded.url;
+        uploadedId = uploaded.id;
+        title = drawing.name;
+      }
+
+      let finalSupplements = [...existingSupplements];
+      if (supplements.length > 0) {
+        const suppPromises = supplements.map(s => DriveService.uploadSupplement(s));
+        const uploadedSupps = await Promise.all(suppPromises);
+        finalSupplements = [...finalSupplements, ...uploadedSupps];
+      }
 
       const newStreak = streakResult.status === 'ALREADY_COMPLETED_TODAY' ? streakResult.streak : streakResult.streak + 1;
       const newLongest = Math.max(db.longestStreak || 0, newStreak);
@@ -73,12 +110,13 @@ export function UploadTab({
       const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
 
       const newDrawing: Drawing = {
-        id: uploaded.id,
-        date: new Date().toISOString(),
-        url: uploaded.url,
-        title: drawing.name,
+        id: uploadedId,
+        date: existingDrawing?.date || new Date().toISOString(),
+        url: uploadedUrl,
+        title: title,
         tall: false, // simplified
-        tags: parsedTags.length > 0 ? parsedTags : undefined
+        tags: parsedTags.length > 0 ? parsedTags : undefined,
+        supplements: finalSupplements.length > 0 ? finalSupplements : undefined
       };
 
       let newDrawings = [...db.drawings];
@@ -209,7 +247,11 @@ export function UploadTab({
         />
         {drawingPreview ? (
           <div className="relative rounded-2xl overflow-hidden aspect-[4/3]" style={{ background: "var(--secondary)" }}>
-            <img src={drawingPreview} alt="Your drawing" className="w-full h-full object-cover" />
+            {drawingPreview.startsWith('blob:') ? (
+              <img src={drawingPreview} alt="Your drawing" className="w-full h-full object-cover" />
+            ) : existingDrawing ? (
+              <DriveImage fileId={existingDrawing.id} alt="Your drawing" className="w-full h-full object-cover" />
+            ) : null}
             <button
               onClick={() => { setDrawing(null); setDrawingPreview(null); }}
               className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
@@ -221,7 +263,7 @@ export function UploadTab({
               className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium"
               style={{ background: "rgba(22,18,13,0.7)", color: "#F2E8D9", fontFamily: "'Inter', sans-serif" }}
             >
-              {drawing?.name}
+              {drawing?.name || existingDrawing?.title || "Drawing"}
             </div>
           </div>
         ) : (
@@ -263,11 +305,24 @@ export function UploadTab({
           </span>
         </span>
         <input ref={suppRef} type="file" multiple className="hidden" onChange={handleSuppInput} />
-        {supplements.length > 0 && (
+        {(supplements.length > 0 || existingSupplements.length > 0) && (
           <div className="flex flex-col gap-1.5">
+            {existingSupplements.map((s, i) => (
+              <div
+                key={`existing-${i}`}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+              >
+                <Paperclip size={14} style={{ color: "var(--muted-foreground)" }} />
+                <span className="text-xs text-foreground flex-1 truncate" style={{ fontFamily: "'Inter', sans-serif" }}>{s.name}</span>
+                <button onClick={() => setExistingSupplements((p) => p.filter((_, j) => j !== i))}>
+                  <X size={14} style={{ color: "var(--muted-foreground)" }} />
+                </button>
+              </div>
+            ))}
             {supplements.map((f, i) => (
               <div
-                key={i}
+                key={`new-${i}`}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
                 style={{ background: "var(--card)", border: "1px solid var(--border)" }}
               >
@@ -331,12 +386,12 @@ export function UploadTab({
       {/* Submit */}
       <button
         onClick={handleSubmit}
-        disabled={!drawing || submitting}
+        disabled={!canSubmit || submitting}
         className="w-full py-4 rounded-2xl font-bold text-base text-primary-foreground transition-all duration-200 active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
         style={{
-          background: drawing ? "linear-gradient(135deg, #FF6B2B, #D94F00)" : "var(--muted)",
+          background: canSubmit ? "linear-gradient(135deg, #FF6B2B, #D94F00)" : "var(--muted)",
           fontFamily: "'Plus Jakarta Sans', sans-serif",
-          boxShadow: drawing ? "0 4px 24px rgba(255,107,43,0.35)" : "none",
+          boxShadow: canSubmit ? "0 4px 24px rgba(255,107,43,0.35)" : "none",
         }}
       >
         {submitting ? (
