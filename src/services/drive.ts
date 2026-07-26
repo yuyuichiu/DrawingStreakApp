@@ -10,7 +10,8 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
-let webAccessToken = '';
+let webAccessToken = localStorage.getItem('webAccessToken') || '';
+let tokenExpiry = parseInt(localStorage.getItem('tokenExpiry') || '0', 10);
 let tokenClient: any = null;
 
 const initWebAuth = () => {
@@ -21,6 +22,10 @@ const initWebAuth = () => {
       callback: (tokenResponse: any) => {
         if (tokenResponse && tokenResponse.access_token) {
           webAccessToken = tokenResponse.access_token;
+          const expiresIn = tokenResponse.expires_in || 3600;
+          tokenExpiry = Date.now() + expiresIn * 1000;
+          localStorage.setItem('webAccessToken', webAccessToken);
+          localStorage.setItem('tokenExpiry', tokenExpiry.toString());
         }
       },
     });
@@ -49,6 +54,10 @@ export const DriveService = {
             reject(tokenResponse);
           }
           webAccessToken = tokenResponse.access_token;
+          const expiresIn = tokenResponse.expires_in || 3600;
+          tokenExpiry = Date.now() + expiresIn * 1000;
+          localStorage.setItem('webAccessToken', webAccessToken);
+          localStorage.setItem('tokenExpiry', tokenExpiry.toString());
           resolve({ id: 'web-user', name: 'Web User' }); // We will fetch real profile later
         };
         tokenClient.requestAccessToken();
@@ -64,10 +73,18 @@ export const DriveService = {
         console.error('Sign out failed', e);
       }
     } else {
+      const clearLocalToken = () => {
+         webAccessToken = '';
+         tokenExpiry = 0;
+         localStorage.removeItem('webAccessToken');
+         localStorage.removeItem('tokenExpiry');
+      };
       if (webAccessToken && (window as any).google) {
          (window as any).google.accounts.oauth2.revoke(webAccessToken, () => {
-             webAccessToken = '';
+             clearLocalToken();
          });
+      } else {
+         clearLocalToken();
       }
     }
   },
@@ -81,9 +98,15 @@ export const DriveService = {
         throw e;
       }
     } else {
-      if (webAccessToken) {
+      if (webAccessToken && Date.now() < tokenExpiry) {
         return webAccessToken;
       }
+      
+      // Token expired or not found
+      webAccessToken = '';
+      tokenExpiry = 0;
+      localStorage.removeItem('webAccessToken');
+      localStorage.removeItem('tokenExpiry');
       throw new Error("No web access token available. Please sign in again.");
     }
   },

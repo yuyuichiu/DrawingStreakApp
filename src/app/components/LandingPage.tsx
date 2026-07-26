@@ -67,9 +67,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSignIn }) => {
               </svg>
               Get Started with Google
             </button>
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-foreground bg-card shadow flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 border border-border">
-              Learn More
-            </a>
           </div>
         </motion.div>
 
