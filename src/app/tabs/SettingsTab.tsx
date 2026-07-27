@@ -38,6 +38,29 @@ export function SettingsTab({
     }
   };
 
+  const updateRewardInterval = async (valueStr: string) => {
+    const value = parseInt(valueStr, 10);
+    const newInterval = isNaN(value) ? 0 : value;
+    if (newInterval === settings.rewardInterval) return;
+
+    let newProgress = db.rewardProgress;
+    if (newInterval > 0 && (db.rewardProgress || 0) > 0) {
+       const keep = window.confirm("You are changing the reward interval. Would you like to keep your currently accumulated days towards the next reward?\n\nOK: Keep progress\nCancel: Reset to zero");
+       if (!keep) {
+         newProgress = 0;
+       }
+    } else if (newInterval === 0) {
+       newProgress = 0;
+    }
+    
+    const newDb = { 
+      ...db, 
+      settings: { ...db.settings, rewardInterval: newInterval },
+      rewardProgress: newProgress
+    };
+    await updateDb(newDb);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -225,6 +248,42 @@ export function SettingsTab({
           )}
         </div>
       )}
+
+      {/* Rewards */}
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+          Rewards
+        </p>
+        <div className="rounded-2xl overflow-hidden px-4 py-3.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <p className="text-sm font-semibold text-foreground mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Reward every (days)
+          </p>
+          <input
+            type="number"
+            min="0"
+            value={settings.rewardInterval || ""}
+            onChange={(e) => updateRewardInterval(e.target.value)}
+            className="w-full text-sm mt-0.5 bg-transparent border-none outline-none"
+            style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
+            placeholder="e.g. 7 (0 to disable)"
+          />
+        </div>
+        {(settings.rewardInterval || 0) > 0 && (
+          <div className="rounded-2xl overflow-hidden px-4 py-3.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <p className="text-sm font-semibold text-foreground mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Reward description
+            </p>
+            <input
+              type="text"
+              value={settings.rewardDescription || ""}
+              onChange={(e) => updateSetting('rewardDescription', e.target.value)}
+              className="w-full text-sm mt-0.5 bg-transparent border-none outline-none"
+              style={{ color: "var(--muted-foreground)", fontFamily: "'Inter', sans-serif" }}
+              placeholder="e.g. Big Treat"
+            />
+          </div>
+        )}
+      </div>
 
       {/* App info */}
       <div className="flex flex-col gap-2">

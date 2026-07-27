@@ -12,7 +12,7 @@ export function HomeTab({
 }: {
   onUpload: () => void;
 }) {
-  const { db: contextDb, timezone } = useAppContext();
+  const { db: contextDb, timezone, updateDb } = useAppContext();
   const db = contextDb!;
   const [showCalendar, setShowCalendar] = useState(false);
   const streakResult = useMemo(() => StreakService.evaluateStreak(db.streak, db.lastActivityAt, timezone), [db, timezone]);
@@ -56,12 +56,19 @@ export function HomeTab({
     return days;
   }, [db.drawings, timezone]);
 
-  const milestones = [
-    { days: 30, label: "30-day streak", achieved: currentStreak >= 30 },
-    { days: 50, label: "50-day streak", achieved: currentStreak >= 50 },
-    { days: 100, label: "Century streak", achieved: currentStreak >= 100 },
-  ];
-
+  const rewardInterval = db.settings.rewardInterval || 0;
+  const rewardProgress = db.rewardProgress || 0;
+  const availableRewards = db.availableRewards || 0;
+  const rewardDescription = db.settings.rewardDescription || "Custom Reward";
+  
+  const handleConsumeReward = async () => {
+    if (availableRewards > 0) {
+      await updateDb({
+        ...db,
+        availableRewards: availableRewards - 1,
+      });
+    }
+  };
   const todayString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   const isPending = streakResult.status !== 'ALREADY_COMPLETED_TODAY';
 
@@ -192,38 +199,94 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Milestones */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-          Milestones
-        </p>
-        {milestones.map((m) => (
+      {/* Rewards Section */}
+      <div className="flex flex-col gap-3 mt-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Your Rewards
+          </p>
+          {availableRewards > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,107,43,0.15)", color: "var(--primary)" }}>
+              {availableRewards} Available
+            </span>
+          )}
+        </div>
+        
+        {rewardInterval > 0 ? (
           <div
-            key={m.days}
-            className="rounded-xl px-4 py-3 flex items-center gap-3"
+            className="rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden"
             style={{
               background: "var(--card)",
-              border: m.achieved ? "1px solid rgba(255,179,71,0.3)" : "1px solid var(--border)",
-              opacity: m.achieved ? 1 : 0.6,
+              border: availableRewards > 0 ? "1px solid rgba(255,179,71,0.5)" : "1px solid var(--border)",
+              boxShadow: availableRewards > 0 ? "0 4px 20px rgba(255,179,71,0.15)" : "none",
             }}
           >
-            <Trophy
-              size={18}
-              style={{ color: m.achieved ? "var(--accent)" : "var(--muted-foreground)" }}
-              fill={m.achieved ? "rgba(255,179,71,0.2)" : "none"}
-            />
-            <span className="text-sm font-medium text-foreground flex-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-              {m.label}
-            </span>
-            {m.achieved ? (
-              <CheckCircle2 size={16} style={{ color: "var(--accent)" }} />
-            ) : (
-              <span className="text-xs text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-                {m.days - currentStreak > 0 ? `${m.days - currentStreak} days away` : "Upcoming"}
-              </span>
+            {availableRewards > 0 && (
+              <motion.div
+                className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-20"
+                style={{ background: "radial-gradient(circle, #FF6B2B 0%, transparent 70%)" }}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              />
+            )}
+            
+            <div className="flex items-center gap-3 relative z-10">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                style={{ background: availableRewards > 0 ? "linear-gradient(135deg, #FF6B2B, #FFB347)" : "var(--secondary)" }}
+              >
+                <Trophy size={22} color={availableRewards > 0 ? "#FFF" : "var(--muted-foreground)"} fill={availableRewards > 0 ? "rgba(255,255,255,0.2)" : "none"} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  {rewardDescription}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Every {rewardInterval} days
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 relative z-10">
+              <div className="flex justify-between items-center text-xs font-semibold" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <span style={{ color: "var(--primary)" }}>{rewardProgress} days</span>
+                <span className="text-muted-foreground">{rewardInterval} days</span>
+              </div>
+              <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: "var(--secondary)" }}>
+                <motion.div 
+                  className="h-full rounded-full"
+                  style={{ background: "linear-gradient(90deg, #FF6B2B, #FFB347)" }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (rewardProgress / rewardInterval) * 100)}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+
+            {availableRewards > 0 && (
+              <button
+                onClick={handleConsumeReward}
+                className="w-full mt-1 py-3 rounded-xl font-bold text-sm text-primary-foreground transition-all active:scale-95 flex justify-center items-center gap-2 relative z-10"
+                style={{ background: "linear-gradient(135deg, #FF6B2B, #D94F00)", fontFamily: "'Plus Jakarta Sans', sans-serif", boxShadow: "0 2px 10px rgba(255,107,43,0.3)" }}
+              >
+                Consume Reward
+              </button>
             )}
           </div>
-        ))}
+        ) : (
+          <div
+            className="rounded-2xl p-5 flex items-center justify-between gap-4"
+            style={{ background: "var(--card)", border: "1px dashed var(--border)" }}
+          >
+             <div className="flex-1">
+               <p className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>No rewards set</p>
+               <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>Setup a treat to motivate yourself.</p>
+             </div>
+             <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--secondary)" }}>
+               <Trophy size={14} style={{ color: "var(--muted-foreground)" }} />
+             </div>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
