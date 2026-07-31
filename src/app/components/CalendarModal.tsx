@@ -42,8 +42,8 @@ export function CalendarModal({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <button onClick={prevMonth} className="p-1 rounded hover:bg-secondary"><ChevronLeft size={18} /></button>
-            <h2 className="text-base font-bold text-foreground w-32 text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {currentDate.toLocaleString('default', { month: 'long' })} {year}
+            <h2 className="text-base font-bold text-foreground text-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {currentDate.toLocaleString('default', { month: 'short' })} {year}
             </h2>
             <button onClick={nextMonth} className="p-1 rounded hover:bg-secondary"><ChevronRight size={18} /></button>
           </div>
@@ -55,7 +55,7 @@ export function CalendarModal({
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
             <div key={`day-${i}`} className="text-center text-[10px] font-semibold text-muted-foreground mb-1">{d}</div>
           ))}
-          {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
+          {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const date = new Date(year, month, i + 1, 12, 0, 0); // use noon
             const dateStr = StreakService.getStreakDay(date, timezone);
@@ -110,7 +110,7 @@ export function CalendarModal({
               </div>
             );
           })}
-          {Array.from({ length: 42 - firstDay - daysInMonth }).map((_, i) => <div key={`empty-end-${i}`} />)}
+          {Array.from({ length: Math.max(0, 42 - firstDay - daysInMonth) }).map((_, i) => <div key={`empty-end-${i}`} className="aspect-square" />)}
         </div>
       </motion.div>
     </motion.div>

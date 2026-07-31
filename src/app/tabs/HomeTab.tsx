@@ -21,15 +21,21 @@ export function HomeTab({
     const drawingsSet = new Set(db.drawings.map(d => StreakService.getStreakDay(new Date(d.date), timezone)));
     const todayStr = StreakService.getStreakDay(new Date(), timezone);
 
+    const today = new Date();
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - today.getDay()); // rewind to Sunday
+
     const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
       const dateStr = StreakService.getStreakDay(d, timezone);
       const done = drawingsSet.has(dateStr);
+      const isToday = dateStr === todayStr;
+      const isFuture = d > today && !isToday;
       let frozen = false;
 
-      if (!done) {
+      if (!done && !isFuture) {
         const prevDate = new Date(d.getTime() - 24 * 60 * 60 * 1000);
         const nextDate = new Date(d.getTime() + 24 * 60 * 60 * 1000);
         const prevStr = StreakService.getStreakDay(prevDate, timezone);
@@ -40,16 +46,17 @@ export function HomeTab({
 
         if (prevDrawn && nextDrawn) {
           frozen = true;
-        } else if (prevDrawn && dateStr !== todayStr && nextStr === todayStr) {
+        } else if (prevDrawn && !isToday && nextStr === todayStr) {
           frozen = true;
         }
       }
 
       days.push({
-        label: d.toLocaleDateString('en-US', { weekday: 'short' })[0],
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3),
         done,
         frozen,
-        today: i === 0
+        today: isToday,
+        future: isFuture,
       });
     }
     return days;
