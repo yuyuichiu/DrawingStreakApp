@@ -20,7 +20,7 @@ export function BottomNav({
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] flex items-center justify-around border-t border-border"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-[420px] flex items-center justify-around border-t border-border"
       style={{ background: "var(--card)", paddingBottom: "env(safe-area-inset-bottom, 12px)" }}
     >
       {tabs.map((t) => {

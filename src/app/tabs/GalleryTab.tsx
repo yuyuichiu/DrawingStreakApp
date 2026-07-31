@@ -39,7 +39,7 @@ export function GalleryTab() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.25 }}
-      className="px-5 pt-12 pb-6 flex flex-col gap-5"
+      className="px-5 pt-12 pb-28 flex flex-col gap-5"
     >
       <div>
         <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
