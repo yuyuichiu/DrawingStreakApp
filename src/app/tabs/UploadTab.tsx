@@ -132,12 +132,27 @@ export function UploadTab({
         newDrawings.unshift(newDrawing);
       }
 
+      let newRewardProgress = db.rewardProgress || 0;
+      let newAvailableRewards = db.availableRewards || 0;
+
+      if (streakResult.status !== 'ALREADY_COMPLETED_TODAY') {
+         if (db.settings.rewardInterval && db.settings.rewardInterval > 0) {
+            newRewardProgress += 1;
+            if (newRewardProgress >= db.settings.rewardInterval) {
+               newAvailableRewards += 1;
+               newRewardProgress = 0;
+            }
+         }
+      }
+
       const newDb: AppDatabase = {
         ...db,
         streak: newStreak,
         longestStreak: newLongest,
         lastActivityAt: new Date().toISOString(),
-        drawings: newDrawings
+        drawings: newDrawings,
+        rewardProgress: newRewardProgress,
+        availableRewards: newAvailableRewards
       };
 
       await updateDb(newDb);

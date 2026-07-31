@@ -18,6 +18,8 @@ export interface Settings {
   morningTime: string;
   eveningTime: string;
   driveFolderLink?: string;
+  rewardInterval?: number;
+  rewardDescription?: string;
 }
 
 export interface AppDatabase {
@@ -27,6 +29,8 @@ export interface AppDatabase {
   settings: Settings;
   drawings: Drawing[];
   updatedAt?: number;
+  rewardProgress?: number;
+  availableRewards?: number;
 }
 
 export const DEFAULT_DB: AppDatabase = {
@@ -40,8 +44,12 @@ export const DEFAULT_DB: AppDatabase = {
     eveningAlert: true,
     morningTime: "09:00",
     eveningTime: "20:00",
-    driveFolderLink: ""
+    driveFolderLink: "",
+    rewardInterval: 0,
+    rewardDescription: ""
   },
   drawings: [],
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
+  rewardProgress: 0,
+  availableRewards: 0
 };
