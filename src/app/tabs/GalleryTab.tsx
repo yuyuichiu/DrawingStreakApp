@@ -32,11 +32,12 @@ export function GalleryTab() {
   const [zoomed, setZoomed] = useState(false);
   const [direction, setDirection] = useState(0);
   const [dragY, setDragY] = useState(0);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   const scaleRef = useRef(1);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const wasMultiTouchRef = useRef(false);
-  const transformRef = useRef<ReactZoomPanPinchContentRef>(null);
+  const transformRef = useRef<ReactZoomPanPinchContentRef | null>(null);
   const gestureModeRef = useRef<"h" | "v" | null>(null);
   const draggingRef = useRef(false);
   const dragYRef = useRef(0);
@@ -82,10 +83,16 @@ export function GalleryTab() {
 
   const selected = selectedIndex !== null ? filtered[selectedIndex] ?? null : null;
 
+  const imageSupplements = useMemo(() => {
+    if (!selected || !selected.supplements) return [];
+    return selected.supplements.filter(s => /\.(jpeg|jpg|png|webp|heic|gif)$/i.test(s.name));
+  }, [selected]);
+
   const close = useCallback(() => {
     setSelectedIndex(null);
     setZoomed(false);
     setDragY(0);
+    setActiveMediaIndex(0);
     scaleRef.current = 1;
     draggingRef.current = false;
     dragYRef.current = 0;
@@ -97,6 +104,7 @@ export function GalleryTab() {
       setDirection(i > (selectedIndex ?? 0) ? 1 : -1);
       setSelectedIndex(i);
       setZoomed(false);
+      setActiveMediaIndex(0);
       scaleRef.current = 1;
     },
     [filtered.length, selectedIndex],
@@ -428,7 +436,6 @@ export function GalleryTab() {
                   className="w-full h-full flex items-center justify-center"
                 >
                   <TransformWrapper
-                    ref={transformRef}
                     initialScale={1}
                     minScale={1}
                     maxScale={5}
@@ -443,23 +450,29 @@ export function GalleryTab() {
                       else if (state.scale <= 1.05 && zoomed) setZoomed(false);
                     }}
                   >
-                    <TransformComponent
-                      wrapperStyle={{ width: "100%", height: "100%" }}
-                      contentStyle={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <DriveImage
-                        fileId={selected.id}
-                        fallbackUrl={selected.url}
-                        alt={selected.title}
-                        className="max-w-[95vw] max-h-[80vh] rounded-2xl object-contain"
-                      />
-                    </TransformComponent>
+                    {(utils) => {
+                      transformRef.current = utils;
+                      return (
+                        <TransformComponent
+                          wrapperStyle={{ width: "100%", height: "100%" }}
+                          contentStyle={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <DriveImage
+                            fileId={activeMediaIndex === 0 ? selected.id : imageSupplements[activeMediaIndex - 1].id}
+                            fallbackUrl={activeMediaIndex === 0 ? selected.url : imageSupplements[activeMediaIndex - 1].url}
+                            alt={activeMediaIndex === 0 ? selected.title : imageSupplements[activeMediaIndex - 1].name}
+                            className="max-w-[95vw] max-h-[80vh] rounded-2xl object-contain"
+                            loaderType="spinner"
+                          />
+                        </TransformComponent>
+                      );
+                    }}
                   </TransformWrapper>
                 </motion.div>
               </AnimatePresence>
@@ -513,6 +526,43 @@ export function GalleryTab() {
                   <X size={18} color="#fff" />
                 </button>
               </div>
+
+              {/* Supplements Tab Row */}
+              {imageSupplements.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto px-2 py-1" style={{ scrollbarWidth: "none" }}>
+                  <button
+                    onClick={() => {
+                      setActiveMediaIndex(0);
+                      transformRef.current?.resetTransform();
+                    }}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                      activeMediaIndex === 0
+                        ? "bg-white text-black"
+                        : "bg-white/20 text-white hover:bg-white/30"
+                    }`}
+                    style={{ fontFamily: "'Inter', sans-serif" }}
+                  >
+                    Main
+                  </button>
+                  {imageSupplements.map((s, idx) => (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setActiveMediaIndex(idx + 1);
+                        transformRef.current?.resetTransform();
+                      }}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        activeMediaIndex === idx + 1
+                          ? "bg-white text-black"
+                          : "bg-white/20 text-white hover:bg-white/30"
+                      }`}
+                      style={{ fontFamily: "'Inter', sans-serif", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {s.name.replace(/\.[^/.]+$/, "")}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Tags - horizontal scroll */}
               {selected.tags && selected.tags.length > 0 && (

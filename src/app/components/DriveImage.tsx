@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { DriveService } from "../../services/drive";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { ImageOff } from "lucide-react";
+import { ImageOff, Loader2 } from "lucide-react";
 
 const imagePromises = new Map<string, Promise<string>>();
 
@@ -14,7 +14,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
   });
 };
 
-export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fileId: string, fallbackUrl?: string, alt: string, className?: string, style?: any }) {
+export function DriveImage({ fileId, fallbackUrl, alt, className, style, loaderType = 'pulse' }: { fileId: string, fallbackUrl?: string, alt: string, className?: string, style?: any, loaderType?: 'pulse' | 'spinner' }) {
   const [src, setSrc] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -35,6 +35,8 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
   }, []);
 
   useEffect(() => {
+    setSrc(null);
+    setHasError(false);
     if (!isVisible) return;
 
     let active = true;
@@ -122,6 +124,13 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style }: { fil
   }
 
   if (!src) {
+    if (loaderType === 'spinner') {
+      return (
+        <div ref={elementRef} className={`flex items-center justify-center text-muted-foreground ${className || ''}`} style={style}>
+          <Loader2 className="animate-spin" size={32} />
+        </div>
+      );
+    }
     return <div ref={elementRef} className={`animate-pulse bg-secondary ${className || ''}`} style={style} />;
   }
 
