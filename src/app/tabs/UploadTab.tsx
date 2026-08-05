@@ -175,7 +175,8 @@ export function UploadTab({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex flex-col items-center justify-center min-h-[70vh] gap-4 px-8"
+        className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[60] flex flex-col items-center justify-center gap-4 px-8"
+        style={{ background: "var(--background)" }}
       >
         <motion.div
           animate={{ rotate: 360 }}
@@ -197,7 +198,8 @@ export function UploadTab({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center min-h-[70vh] gap-4 px-8"
+        className="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-[420px] z-[60] flex flex-col items-center justify-center gap-4 px-8"
+        style={{ background: "var(--background)" }}
       >
         <motion.div
           initial={{ scale: 0 }}

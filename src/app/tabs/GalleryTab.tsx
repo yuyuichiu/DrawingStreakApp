@@ -88,6 +88,14 @@ export function GalleryTab() {
     return selected.supplements.filter(s => /\.(jpeg|jpg|png|webp|heic|gif)$/i.test(s.name));
   }, [selected]);
 
+  const allMedia = useMemo(() => {
+    if (!selected) return [];
+    return [
+      { id: selected.id, url: selected.url, alt: selected.title },
+      ...imageSupplements.map(s => ({ id: s.id, url: s.url, alt: s.name }))
+    ];
+  }, [selected, imageSupplements]);
+
   const close = useCallback(() => {
     setSelectedIndex(null);
     setZoomed(false);
@@ -463,13 +471,18 @@ export function GalleryTab() {
                             justifyContent: "center",
                           }}
                         >
-                          <DriveImage
-                            fileId={activeMediaIndex === 0 ? selected.id : imageSupplements[activeMediaIndex - 1].id}
-                            fallbackUrl={activeMediaIndex === 0 ? selected.url : imageSupplements[activeMediaIndex - 1].url}
-                            alt={activeMediaIndex === 0 ? selected.title : imageSupplements[activeMediaIndex - 1].name}
-                            className="max-w-[95vw] max-h-[80vh] rounded-2xl object-contain"
-                            loaderType="spinner"
-                          />
+                          {allMedia.map((media, idx) => (
+                            <DriveImage
+                              key={media.id}
+                              fileId={media.id}
+                              fallbackUrl={media.url}
+                              alt={media.alt}
+                              className="max-w-[95vw] max-h-[80vh] rounded-2xl object-contain"
+                              style={{ display: activeMediaIndex === idx ? 'block' : 'none' }}
+                              loaderType="spinner"
+                              preload={true}
+                            />
+                          ))}
                         </TransformComponent>
                       );
                     }}

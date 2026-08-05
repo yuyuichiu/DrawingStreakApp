@@ -14,13 +14,17 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
   });
 };
 
-export function DriveImage({ fileId, fallbackUrl, alt, className, style, loaderType = 'pulse' }: { fileId: string, fallbackUrl?: string, alt: string, className?: string, style?: any, loaderType?: 'pulse' | 'spinner' }) {
+export function DriveImage({ fileId, fallbackUrl, alt, className, style, loaderType = 'pulse', preload = false }: { fileId: string, fallbackUrl?: string, alt: string, className?: string, style?: any, loaderType?: 'pulse' | 'spinner', preload?: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(preload);
   const elementRef = useRef<any>(null);
 
   useEffect(() => {
+    if (preload) {
+      setIsVisible(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -32,7 +36,7 @@ export function DriveImage({ fileId, fallbackUrl, alt, className, style, loaderT
     );
     if (elementRef.current) observer.observe(elementRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [preload]);
 
   useEffect(() => {
     setSrc(null);
