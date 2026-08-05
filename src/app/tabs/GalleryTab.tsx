@@ -136,7 +136,7 @@ export function GalleryTab() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
             style={{ background: "rgba(22,18,13,0.92)" }}
             onClick={() => setSelected(null)}
           >
