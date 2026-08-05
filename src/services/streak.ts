@@ -6,12 +6,12 @@ export const StreakService = {
    * Evaluates the streak status based on the last activity date and configured timezone.
    * Cutoff is 4:00 AM of the configured timezone.
    */
-  evaluateStreak(currentStreak: number, lastActivityAt: string | null, timezone: string) {
+  evaluateStreak(currentStreak: number, lastActivityAt: string | null, timezone: string, nowDate: Date = new Date()) {
     if (!lastActivityAt) {
       return { streak: 0, status: 'NO_ACTIVITY' };
     }
 
-    const now = new Date();
+    const now = nowDate;
     
     const lastStreakDay = this.getStreakDay(new Date(lastActivityAt), timezone);
     const currentStreakDay = this.getStreakDay(now, timezone);
