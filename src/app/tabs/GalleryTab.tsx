@@ -33,6 +33,7 @@ export function GalleryTab() {
   const [direction, setDirection] = useState(0);
   const [dragY, setDragY] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [uiVisible, setUiVisible] = useState(true);
 
   const scaleRef = useRef(1);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -41,6 +42,7 @@ export function GalleryTab() {
   const gestureModeRef = useRef<"h" | "v" | null>(null);
   const draggingRef = useRef(false);
   const dragYRef = useRef(0);
+  const supplementsRef = useRef<HTMLDivElement>(null);
 
   const streakDaysMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -101,6 +103,7 @@ export function GalleryTab() {
     setZoomed(false);
     setDragY(0);
     setActiveMediaIndex(0);
+    setUiVisible(true);
     scaleRef.current = 1;
     draggingRef.current = false;
     dragYRef.current = 0;
@@ -113,6 +116,7 @@ export function GalleryTab() {
       setSelectedIndex(i);
       setZoomed(false);
       setActiveMediaIndex(0);
+      setUiVisible(true);
       scaleRef.current = 1;
     },
     [filtered.length, selectedIndex],
@@ -219,6 +223,7 @@ export function GalleryTab() {
       }
       const touch = e.changedTouches[0];
       const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
       touchStartRef.current = null;
 
       if (mode === "h" && Math.abs(dx) > 60) {
@@ -335,11 +340,8 @@ export function GalleryTab() {
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3 pointer-events-none"
                   style={{ background: "linear-gradient(to top, rgba(22,18,13,0.85) 0%, transparent 60%)" }}
                 >
-                  <p className="text-xs font-semibold text-foreground leading-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    {item.title}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(item.date))} - Day {streakDaysMap.get(item.id)}
+                  <p className="text-xs font-semibold text-white leading-tight drop-shadow-md" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(StreakService.getStreakDay(new Date(item.date), timezone)))} - Day {streakDaysMap.get(item.id)}
                   </p>
                   {item.tags && item.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -414,7 +416,12 @@ export function GalleryTab() {
 
             {/* Image area — follows finger on drag-to-dismiss */}
             <div
-              className="flex-1 relative overflow-hidden flex items-center justify-center"
+              className="flex-1 relative overflow-hidden flex items-center justify-center cursor-pointer"
+              onClick={(e) => {
+                if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG' || (e.target as HTMLElement).className.includes('react-transform-component')) {
+                  setUiVisible(v => !v);
+                }
+              }}
               style={{
                 transform: `translateY(${dragY}px) scale(${1 - dragProgress * 0.08})`,
                 opacity: 1 - dragProgress * 0.4,
@@ -424,9 +431,9 @@ export function GalleryTab() {
               {/* Desktop prev button */}
               {isDesktop && selectedIndex > 0 && (
                 <button
-                  onClick={goPrev}
+                  onClick={(e) => { e.stopPropagation(); goPrev(); }}
                   className="absolute left-3 z-10 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-opacity opacity-40 hover:opacity-100"
-                  style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", color: "#fff" }}
+                  style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", color: "#fff", opacity: uiVisible ? undefined : 0, pointerEvents: uiVisible ? 'auto' : 'none' }}
                 >
                   <ChevronLeft size={22} />
                 </button>
@@ -493,9 +500,9 @@ export function GalleryTab() {
               {/* Desktop next button */}
               {isDesktop && selectedIndex < filtered.length - 1 && (
                 <button
-                  onClick={goNext}
+                  onClick={(e) => { e.stopPropagation(); goNext(); }}
                   className="absolute right-3 z-10 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-opacity opacity-40 hover:opacity-100"
-                  style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", color: "#fff" }}
+                  style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", color: "#fff", opacity: uiVisible ? undefined : 0, pointerEvents: uiVisible ? 'auto' : 'none' }}
                 >
                   <ChevronRight size={22} />
                 </button>
@@ -512,7 +519,8 @@ export function GalleryTab() {
                 minWidth: "85vw",
                 maxWidth: "400px",
                 transform: `translateY(${dragY * 0.3}px)`,
-                opacity: 1 - dragProgress * 0.6,
+                opacity: uiVisible ? 1 - dragProgress * 0.6 : 0,
+                pointerEvents: uiVisible ? "auto" : "none",
                 transition: dragY > 0 ? "none" : "transform 0.3s ease-out, opacity 0.3s ease-out",
               }}
             >
@@ -522,27 +530,37 @@ export function GalleryTab() {
                     className="font-bold text-white truncate"
                     style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                   >
-                    {selected.title}
+                    {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(StreakService.getStreakDay(new Date(selected.date), timezone)))} - Day {streakDaysMap.get(selected.id)}
                   </p>
                   <p
-                    className="text-xs text-white/70"
+                    className="text-xs text-white/70 truncate"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(selected.date))} - Day {streakDaysMap.get(selected.id)}
+                    {activeMediaIndex === 0 ? selected.title : imageSupplements[activeMediaIndex - 1]?.name || selected.title}
                   </p>
                 </div>
                 <button
                   onClick={close}
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
-                  style={{ background: "rgba(255,255,255,0.15)" }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors hover:bg-red-500/40"
+                  style={{ background: "rgba(239, 68, 68, 0.2)" }}
                 >
-                  <X size={18} color="#fff" />
+                  <X size={18} color="#fca5a5" />
                 </button>
               </div>
 
               {/* Supplements Tab Row */}
               {imageSupplements.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto px-2 py-1" style={{ scrollbarWidth: "none" }}>
+                <div 
+                  ref={supplementsRef}
+                  className="flex gap-2 overflow-x-auto px-2 py-1" 
+                  style={{ scrollbarWidth: "none" }}
+                  onTouchStart={(e) => {
+                    const el = supplementsRef.current;
+                    if (el && el.scrollWidth > el.clientWidth + 1) {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
                   <button
                     onClick={() => {
                       setActiveMediaIndex(0);
@@ -571,7 +589,7 @@ export function GalleryTab() {
                       }`}
                       style={{ fontFamily: "'Inter', sans-serif", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                     >
-                      {s.name.replace(/\.[^/.]+$/, "")}
+                      {String(idx + 1).padStart(2, "0")}
                     </button>
                   ))}
                 </div>
@@ -595,25 +613,28 @@ export function GalleryTab() {
                 </div>
               )}
 
-              {/* Dot indicator */}
+              {/* Swipe/Pagination indicator */}
               {filtered.length > 1 && (
-                <div className="flex justify-center gap-1.5 pt-1">
-                  {Array.from({ length: dotRange.count }).map((_, i) => {
-                    const idx = dotRange.start + i;
-                    const active = idx === selectedIndex;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => goTo(idx)}
-                        className="rounded-full transition-all duration-200 cursor-pointer"
-                        style={{
-                          width: active ? 8 : 6,
-                          height: active ? 8 : 6,
-                          background: active ? "#fff" : "rgba(255,255,255,0.35)",
-                        }}
-                      />
-                    );
-                  })}
+                <div className="flex items-center justify-center gap-4 pt-2 pb-1 border-t border-white/10 mt-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                    className="text-white/50 hover:text-white transition-colors cursor-pointer p-1"
+                    disabled={selectedIndex === 0}
+                    style={{ opacity: selectedIndex === 0 ? 0.3 : 1 }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <p className="text-[11px] font-bold tracking-widest text-white/70" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {selectedIndex + 1} / {filtered.length}
+                  </p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); goNext(); }}
+                    className="text-white/50 hover:text-white transition-colors cursor-pointer p-1"
+                    disabled={selectedIndex === filtered.length - 1}
+                    style={{ opacity: selectedIndex === filtered.length - 1 ? 0.3 : 1 }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               )}
             </div>
