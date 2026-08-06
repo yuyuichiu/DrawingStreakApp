@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Flame, Calendar, Snowflake, AlertCircle, Trophy, Pencil, X, Check } from "lucide-react";
 import { StreakService } from "../../services/streak";
+import { CONFIG } from "../../config";
 import { FlameIcon } from "../components/FlameIcon";
 import { CalendarModal } from "../components/CalendarModal";
 import { useAppContext } from "../../hooks/AppContext";
@@ -21,25 +22,29 @@ export function HomeTab({
     const drawingsSet = new Set(db.drawings.map(d => StreakService.getStreakDay(new Date(d.date), timezone)));
     const todayStr = StreakService.getStreakDay(new Date(), timezone);
 
-    const today = new Date();
-    const sunday = new Date(today);
-    sunday.setDate(today.getDate() - today.getDay()); // rewind to Sunday
+    // Parse todayStr as a local date at noon to avoid any timezone edge cases
+    const [y, m, d_num] = todayStr.split('-').map(Number);
+    const todayStreakDate = new Date(y, m - 1, d_num, 12, 0, 0);
+
+    const sunday = new Date(todayStreakDate);
+    sunday.setDate(todayStreakDate.getDate() - todayStreakDate.getDay());
 
     const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(sunday);
       d.setDate(sunday.getDate() + i);
-      const dateStr = StreakService.getStreakDay(d, timezone);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      
       const done = drawingsSet.has(dateStr);
       const isToday = dateStr === todayStr;
-      const isFuture = d > today && !isToday;
+      const isFuture = d > todayStreakDate && !isToday;
       let frozen = false;
 
       if (!done && !isFuture) {
         const prevDate = new Date(d.getTime() - 24 * 60 * 60 * 1000);
         const nextDate = new Date(d.getTime() + 24 * 60 * 60 * 1000);
-        const prevStr = StreakService.getStreakDay(prevDate, timezone);
-        const nextStr = StreakService.getStreakDay(nextDate, timezone);
+        const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(prevDate.getDate()).padStart(2, '0')}`;
+        const nextStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
         const prevDrawn = drawingsSet.has(prevStr);
         const nextDrawn = drawingsSet.has(nextStr);
@@ -133,7 +138,13 @@ export function HomeTab({
     await updateDb({ ...db, availableRewards: availableRewards - 1 });
     setTimeout(() => setConsuming(false), 1200);
   }, [availableRewards, consuming, db, updateDb]);
-  const todayString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  const cutoffHour = parseInt(CONFIG.STREAK_CUTOFF_TIME.split(':')[0], 10);
+  const streakDayStr = StreakService.getStreakDay(new Date(), timezone);
+  const calendarDayStr = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  const isInGraceWindow = calendarDayStr !== streakDayStr;
+  const [sy, sm, sd] = streakDayStr.split('-').map(Number);
+  const todayString = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(sy, sm - 1, sd, 12));
+  const tzAbbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short', timeZone: timezone }).formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value ?? timezone;
   const isPending = streakResult.status !== 'ALREADY_COMPLETED_TODAY';
 
   const displayName = db.settings.userName || "Artist";
@@ -149,7 +160,7 @@ export function HomeTab({
       {/* Header */}
       <div className="flex flex-col">
         <p className="text-xs font-medium tracking-widest uppercase text-muted-foreground" style={{ fontFamily: "'Inter', sans-serif" }}>
-          {todayString}
+          {todayString} · {tzAbbr}{isInGraceWindow ? ` (day switch at ${cutoffHour}:00)` : ''}
         </p>
         <h1
           className="text-2xl font-extrabold text-foreground mt-0.5 leading-tight break-words"
