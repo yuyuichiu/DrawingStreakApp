@@ -6,6 +6,7 @@ import { AppDatabase, Drawing } from "../../types";
 import { DriveService } from "../../services/drive";
 import { StreakService } from "../../services/streak";
 import { NotificationService } from "../../services/notifications";
+import { getTagStyle } from "../utils";
 import { FlameIcon } from "../components/FlameIcon";
 import { DriveImage } from "../components/DriveImage";
 
@@ -24,7 +25,8 @@ export function UploadTab({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   const drawingRef = useRef<HTMLInputElement>(null);
@@ -44,7 +46,7 @@ export function UploadTab({
     if (streakResult.status === 'ALREADY_COMPLETED_TODAY' && !initialized) {
       if (existingDrawing) {
         setDrawingPreview(existingDrawing.url);
-        setTags(existingDrawing.tags?.join(', ') || "");
+        setTags(existingDrawing.tags || []);
         setExistingSupplements(existingDrawing.supplements || []);
       }
       setInitialized(true);
@@ -107,7 +109,7 @@ export function UploadTab({
       const newStreak = streakResult.status === 'ALREADY_COMPLETED_TODAY' ? streakResult.streak : streakResult.streak + 1;
       const newLongest = Math.max(db.longestStreak || 0, newStreak);
 
-      const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      const parsedTags = tags;
 
       const newDrawing: Drawing = {
         id: uploadedId,
@@ -365,21 +367,85 @@ export function UploadTab({
       </div>
 
       {/* Tags */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 relative">
         <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           Tags
-          <span className="text-xs font-normal text-muted-foreground ml-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-            comma separated
-          </span>
         </span>
-        <input
-          type="text"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="e.g. anatomy, digital, sketch"
-          className="px-3 py-2.5 rounded-xl border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
-          style={{ background: "var(--card)", border: "1px solid var(--border)", fontFamily: "'Inter', sans-serif" }}
-        />
+        <div 
+          className="flex flex-wrap gap-2 px-3 py-2.5 rounded-2xl text-sm"
+          style={{ background: "var(--card)", border: "1px solid var(--border)", fontFamily: "'Inter', sans-serif", minHeight: "52px" }}
+        >
+          {tags.map((tag, i) => {
+             const defined = db.definedTags?.find(t => t.name === tag);
+             const tagColor = defined?.color || 'var(--primary)';
+             return (
+               <div key={i} className="flex items-center gap-1.5 px-2 py-0.5 rounded" style={{ ...getTagStyle(tagColor) }}>
+                 <span className="text-xs font-bold">{tag}</span>
+                 <button onClick={() => setTags(tags.filter((_, j) => j !== i))} className="hover:opacity-70 transition-opacity flex items-center justify-center"><X size={12} strokeWidth={3} /></button>
+               </div>
+             );
+          })}
+          <input
+            type="text"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value.toUpperCase())}
+            onKeyDown={(e) => {
+               if (e.key === 'Enter' || e.key === ',') {
+                 e.preventDefault();
+                 const val = tagInput.trim().toUpperCase();
+                 if (val && !tags.includes(val)) {
+                    setTags([...tags, val]);
+                    if (!db.definedTags?.some(t => t.name.trim().toUpperCase() === val)) {
+                       const hue = Math.floor(Math.random() * 360);
+                       const newTag = { id: crypto.randomUUID(), name: val, color: `hsl(${hue}, 70%, 50%)` };
+                       updateDb({ ...db, definedTags: [...(db.definedTags || []), newTag] });
+                    }
+                 }
+                 setTagInput("");
+               } else if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+                 setTags(tags.slice(0, -1));
+               }
+            }}
+            placeholder={tags.length === 0 ? "Type and press Enter..." : ""}
+            className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground min-w-[120px] ml-1 uppercase"
+          />
+        </div>
+        {(db.definedTags && db.definedTags.filter(t => !tags.includes(t.name) && t.name.toLowerCase().includes(tagInput.toLowerCase())).length > 0) || (tagInput.trim() && !db.definedTags?.some(t => t.name.trim().toUpperCase() === tagInput.trim().toUpperCase())) ? (
+          <div className="flex flex-col gap-1.5 mt-2 px-1">
+             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>Suggestions</span>
+             <div className="flex flex-wrap gap-2">
+               {db.definedTags?.filter(t => !tags.includes(t.name) && t.name.toLowerCase().includes(tagInput.toLowerCase())).map(t => (
+                 <button
+                   key={t.id}
+                   onClick={() => {
+                     setTags([...tags, t.name.toUpperCase()]);
+                     setTagInput("");
+                   }}
+                   className="px-2 py-0.5 rounded text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                   style={{ ...getTagStyle(t.color) }}
+                 >
+                   <span>+</span> {t.name}
+                 </button>
+               ))}
+               {tagInput.trim() && !db.definedTags?.some(t => t.name.trim().toUpperCase() === tagInput.trim().toUpperCase()) && (
+                 <button
+                   onClick={() => {
+                     const val = tagInput.trim().toUpperCase();
+                     setTags([...tags, val]);
+                     const hue = Math.floor(Math.random() * 360);
+                     const newTag = { id: crypto.randomUUID(), name: val, color: `hsl(${hue}, 70%, 50%)` };
+                     updateDb({ ...db, definedTags: [...(db.definedTags || []), newTag] });
+                     setTagInput("");
+                   }}
+                   className="px-2 py-0.5 rounded text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                   style={{ background: "transparent", color: "var(--primary)", border: `1px dashed var(--primary)` }}
+                 >
+                   <span>+</span> Create "{tagInput.trim().toUpperCase()}"
+                 </button>
+               )}
+             </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Drive destination */}

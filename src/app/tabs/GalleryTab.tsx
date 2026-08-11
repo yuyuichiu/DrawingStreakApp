@@ -11,6 +11,7 @@ import { Drawing } from "../../types";
 import { DriveImage } from "../components/DriveImage";
 import { useAppContext } from "../../hooks/AppContext";
 import { StreakService } from "../../services/streak";
+import { getTagStyle } from "../utils";
 
 const MAX_DOTS = 7;
 const DISMISS_THRESHOLD = 120;
@@ -22,12 +23,16 @@ const slideVariants = {
 };
 
 export function GalleryTab() {
-  const { db, timezone } = useAppContext();
+  const { db, updateDb, timezone } = useAppContext();
   const drawings = db!.drawings;
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [searchDate, setSearchDate] = useState("");
   const [searchTags, setSearchTags] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [editTagsOpen, setEditTagsOpen] = useState(false);
+  const [editingTags, setEditingTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [hintVisible, setHintVisible] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [direction, setDirection] = useState(0);
@@ -104,6 +109,7 @@ export function GalleryTab() {
     setDragY(0);
     setActiveMediaIndex(0);
     setUiVisible(true);
+    setEditTagsOpen(false);
     scaleRef.current = 1;
     draggingRef.current = false;
     dragYRef.current = 0;
@@ -282,28 +288,94 @@ export function GalleryTab() {
 
       {/* Search */}
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-          <input
-            type="date"
-            value={searchDate}
-            onChange={(e) => setSearchDate(e.target.value)}
-            className="w-full bg-secondary text-foreground rounded-2xl py-3 pl-10 pr-3 text-sm font-medium outline-none border border-transparent focus:border-primary/50 transition-colors appearance-none min-h-[46px]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          />
-        </div>
-        <div className="relative flex-[1.5]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-          <input
-            type="text"
-            placeholder="Search tags..."
-            value={searchTags}
-            onChange={(e) => setSearchTags(e.target.value)}
-            className="w-full bg-secondary text-foreground rounded-2xl py-3 pl-10 pr-3 text-sm font-medium outline-none border border-transparent focus:border-primary/50 transition-colors min-h-[46px]"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          />
-        </div>
+        {/* Filter Button */}
+        <button 
+          className="w-full flex items-center justify-center gap-2 bg-secondary text-foreground rounded-2xl py-3 text-sm font-medium min-h-[46px]"
+          onClick={() => setFilterOpen(true)}
+        >
+          <Search size={16} /> Filters {searchDate || searchTags ? '(Active)' : ''}
+        </button>
       </div>
+
+      <AnimatePresence>
+        {filterOpen && (
+          <>
+            <motion.div 
+               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+               className="fixed inset-0 bg-black/60 z-50"
+               onClick={() => setFilterOpen(false)}
+            />
+            <motion.div
+               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+               transition={{ type: "spring", damping: 25, stiffness: 300 }}
+               className="fixed bottom-0 left-0 right-0 bg-background rounded-t-3xl z-50 p-6 pb-28 flex flex-col gap-5 max-h-[90vh] overflow-y-auto"
+               style={{ boxShadow: "0 -10px 40px rgba(0,0,0,0.2)" }}
+            >
+               <div className="flex justify-between items-center">
+                 <h3 className="text-lg font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Filters</h3>
+                 <button onClick={() => { setSearchDate(""); setSearchTags(""); }} className="text-sm text-primary font-medium">Clear</button>
+               </div>
+               
+               <div className="flex flex-col gap-2">
+                 <label className="text-xs font-semibold text-muted-foreground uppercase">Date</label>
+                 <div className="relative">
+                   <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                   <input
+                     type="date"
+                     value={searchDate}
+                     onChange={(e) => setSearchDate(e.target.value)}
+                     className="w-full bg-secondary text-foreground rounded-2xl py-3 pl-10 pr-3 text-sm font-medium outline-none"
+                     style={{ fontFamily: "'Inter', sans-serif" }}
+                   />
+                 </div>
+               </div>
+               
+               <div className="flex flex-col gap-2">
+                 <label className="text-xs font-semibold text-muted-foreground uppercase">Tags</label>
+                 <div className="relative">
+                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                   <input
+                     type="text"
+                     placeholder="Search tags..."
+                     value={searchTags}
+                     onChange={(e) => setSearchTags(e.target.value)}
+                     className="w-full bg-secondary text-foreground rounded-2xl py-3 pl-10 pr-3 text-sm font-medium outline-none"
+                     style={{ fontFamily: "'Inter', sans-serif" }}
+                   />
+                 </div>
+                 {/* Tag quick-select chips */}
+                 {db.definedTags && db.definedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {db.definedTags.map(tag => (
+                         <button 
+                           key={tag.id}
+                           onClick={() => {
+                             if (searchTags.includes(tag.name)) {
+                                setSearchTags(searchTags.replace(tag.name, "").trim());
+                             } else {
+                                setSearchTags((searchTags + " " + tag.name).trim());
+                             }
+                           }}
+                           className="px-2 py-0.5 rounded text-xs font-bold transition-opacity"
+                           style={{ 
+                             ...getTagStyle(tag.color),
+                             opacity: searchTags.includes(tag.name) ? 1 : 0.4
+                           }}
+                         >
+                           {tag.name}
+                         </button>
+                      ))}
+                    </div>
+                 )}
+               </div>
+
+               <button onClick={() => setFilterOpen(false)} className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold mt-2">
+                 View {filtered.length} drawings
+               </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Masonry grid */}
       {filtered.length === 0 ? (
@@ -345,11 +417,15 @@ export function GalleryTab() {
                   </p>
                   {item.tags && item.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {item.tags.map((t) => (
-                        <span key={t} className="text-[8px] uppercase tracking-wider px-1 py-0.5 rounded-sm" style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}>
-                          {t}
-                        </span>
-                      ))}
+                      {item.tags.map((t) => {
+                         const defined = db.definedTags?.find(tag => tag.name === t);
+                         const tagColor = defined?.color || 'var(--primary)';
+                         return (
+                           <span key={t} className="text-[8px] uppercase font-bold tracking-wider px-1 py-0.5 rounded-sm" style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${tagColor}`, color: tagColor }}>
+                             {t}
+                           </span>
+                         );
+                      })}
                     </div>
                   )}
                 </div>
@@ -595,23 +671,39 @@ export function GalleryTab() {
                 </div>
               )}
 
-              {/* Tags - horizontal scroll */}
-              {selected.tags && selected.tags.length > 0 && (
+              {/* Tags - horizontal scroll with Edit button */}
+              <div className="flex gap-2 items-center px-2">
                 <div
-                  className="flex gap-1.5 overflow-x-auto px-2"
+                  className="flex gap-1.5 overflow-x-auto"
                   style={{ scrollbarWidth: "none" }}
                 >
-                  {selected.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded"
-                      style={{ background: "var(--secondary)", color: "var(--foreground)" }}
-                    >
-                      {t}
-                    </span>
-                  ))}
+                  {selected.tags && selected.tags.length > 0 ? selected.tags.map((t) => {
+                    const defined = db.definedTags?.find(tag => tag.name === t);
+                    const tagColor = defined?.color || 'var(--primary)';
+                    return (
+                      <span
+                        key={t}
+                        className="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold"
+                        style={{ ...getTagStyle(tagColor) }}
+                      >
+                        {t}
+                      </span>
+                    );
+                  }) : (
+                    <span className="text-[10px] text-white/50 uppercase tracking-wider">No Tags</span>
+                  )}
                 </div>
-              )}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTags(selected.tags || []);
+                    setEditTagsOpen(true);
+                  }}
+                  className="ml-auto text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-white/20 text-white hover:bg-white/30 transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
 
               {/* Swipe/Pagination indicator */}
               {filtered.length > 1 && (
@@ -638,6 +730,116 @@ export function GalleryTab() {
                 </div>
               )}
             </div>
+            {/* Edit Tags Modal */}
+            <AnimatePresence>
+              {editTagsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute inset-0 z-[110] flex items-center justify-center p-4 bg-black/60"
+                  onClick={() => setEditTagsOpen(false)}
+                >
+                  <div 
+                    className="bg-background w-full max-w-sm rounded-3xl p-5 flex flex-col gap-4 shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Edit Tags</h3>
+                      <button onClick={() => setEditTagsOpen(false)}><X size={20} className="text-muted-foreground" /></button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 p-3 rounded-2xl text-sm" style={{ background: "var(--card)", border: "1px solid var(--border)", fontFamily: "'Inter', sans-serif", minHeight: "52px" }}>
+                      {editingTags.map((tag, i) => {
+                        const defined = db.definedTags?.find(t => t.name === tag);
+                        const tagColor = defined?.color || 'var(--primary)';
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 px-2 py-0.5 rounded" style={{ ...getTagStyle(tagColor) }}>
+                            <span className="text-xs font-bold">{tag}</span>
+                            <button onClick={() => setEditingTags(editingTags.filter((_, j) => j !== i))} className="hover:opacity-70 transition-opacity flex items-center justify-center"><X size={12} strokeWidth={3} /></button>
+                          </div>
+                        );
+                      })}
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                           if (e.key === 'Enter' || e.key === ',') {
+                             e.preventDefault();
+                             const val = tagInput.trim().toUpperCase();
+                             if (val && !editingTags.includes(val)) {
+                                setEditingTags([...editingTags, val]);
+                                if (!db.definedTags?.some(t => t.name.trim().toUpperCase() === val)) {
+                                   const hue = Math.floor(Math.random() * 360);
+                                   const newTag = { id: crypto.randomUUID(), name: val, color: `hsl(${hue}, 70%, 50%)` };
+                                   updateDb({ ...db, definedTags: [...(db.definedTags || []), newTag] });
+                                }
+                             }
+                             setTagInput("");
+                           } else if (e.key === 'Backspace' && !tagInput && editingTags.length > 0) {
+                             setEditingTags(editingTags.slice(0, -1));
+                           }
+                        }}
+                        placeholder={editingTags.length === 0 ? "Type and press Enter..." : ""}
+                        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground min-w-[120px] ml-1 uppercase"
+                      />
+                    </div>
+
+                    {(db.definedTags && db.definedTags.filter(t => !editingTags.includes(t.name) && t.name.toLowerCase().includes(tagInput.toLowerCase())).length > 0) || (tagInput.trim() && !db.definedTags?.some(t => t.name.trim().toUpperCase() === tagInput.trim().toUpperCase())) ? (
+                      <div className="flex flex-col gap-1.5 mt-1 px-1">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest" style={{ fontFamily: "'Inter', sans-serif" }}>Available Tags</span>
+                        <div className="flex flex-wrap gap-2">
+                          {db.definedTags?.filter(t => !editingTags.includes(t.name) && t.name.toLowerCase().includes(tagInput.toLowerCase())).map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => {
+                                setEditingTags([...editingTags, t.name.toUpperCase()]);
+                                setTagInput("");
+                              }}
+                              className="px-2 py-0.5 rounded text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                              style={{ ...getTagStyle(t.color) }}
+                            >
+                              <span>+</span> {t.name}
+                            </button>
+                          ))}
+                          {tagInput.trim() && !db.definedTags?.find(t => t.name === tagInput.trim().toUpperCase()) && (
+                             <button
+                               onClick={() => {
+                                 const val = tagInput.trim().toUpperCase();
+                                 setEditingTags([...editingTags, val]);
+                                 const hue = Math.floor(Math.random() * 360);
+                                 const newTag = { id: crypto.randomUUID(), name: val, color: `hsl(${hue}, 70%, 50%)` };
+                                 updateDb({ ...db, definedTags: [...(db.definedTags || []), newTag] });
+                                 setTagInput("");
+                               }}
+                               className="px-2 py-0.5 rounded text-xs font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-1"
+                               style={{ background: "transparent", color: "var(--primary)", border: `1px dashed var(--primary)` }}
+                             >
+                               <span>+</span> Create "{tagInput.trim().toUpperCase()}"
+                             </button>
+                           )}
+                        </div>
+                      </div>
+                    ) : null}
+                    
+                    <button 
+                      onClick={() => {
+                        const newDrawings = db.drawings.map(d => {
+                          if (d.id === selected.id) return { ...d, tags: editingTags };
+                          return d;
+                        });
+                        updateDb({ ...db, drawings: newDrawings });
+                        setEditTagsOpen(false);
+                      }} 
+                      className="w-full py-3 mt-2 bg-primary text-primary-foreground rounded-2xl font-bold"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

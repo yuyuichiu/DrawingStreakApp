@@ -22,12 +22,19 @@ export interface Settings {
   rewardDescription?: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface AppDatabase {
   streak: number;
   longestStreak: number;
   lastActivityAt: string | null;
   settings: Settings;
   drawings: Drawing[];
+  definedTags?: Tag[]; // optional for backward compatability
   updatedAt?: number;
   rewardProgress?: number;
   availableRewards?: number;
@@ -49,6 +56,7 @@ export const DEFAULT_DB: AppDatabase = {
     rewardDescription: ""
   },
   drawings: [],
+  definedTags: [],
   updatedAt: Date.now(),
   rewardProgress: 0,
   availableRewards: 0
