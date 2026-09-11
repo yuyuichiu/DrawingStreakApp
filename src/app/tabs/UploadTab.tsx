@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
-import { ImageIcon, X, Paperclip, Plus, FolderOpen, Upload } from "lucide-react";
+import { ImageIcon, X, Paperclip, Plus, FolderOpen, Upload, AlignLeft } from "lucide-react";
 import { useAppContext } from "../../hooks/AppContext";
 import { AppDatabase, Drawing } from "../../types";
 import { DriveService } from "../../services/drive";
@@ -27,6 +27,7 @@ export function UploadTab({
   const [dragOver, setDragOver] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [initialized, setInitialized] = useState(false);
 
   const drawingRef = useRef<HTMLInputElement>(null);
@@ -48,6 +49,7 @@ export function UploadTab({
         setDrawingPreview(existingDrawing.url);
         setTags(existingDrawing.tags || []);
         setExistingSupplements(existingDrawing.supplements || []);
+        setRemarks(existingDrawing.remarks || "");
       }
       setInitialized(true);
     }
@@ -118,7 +120,8 @@ export function UploadTab({
         title: title,
         tall: false, // simplified
         tags: parsedTags.length > 0 ? parsedTags : undefined,
-        supplements: finalSupplements.length > 0 ? finalSupplements : undefined
+        supplements: finalSupplements.length > 0 ? finalSupplements : undefined,
+        remarks: remarks.trim() ? remarks.trim() : undefined
       };
 
       let newDrawings = [...db.drawings];
@@ -446,6 +449,23 @@ export function UploadTab({
              </div>
           </div>
         ) : null}
+      </div>
+
+      {/* Remarks */}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Remarks
+          <span className="text-xs font-normal text-muted-foreground ml-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+            optional
+          </span>
+        </span>
+        <textarea
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          placeholder="How did today's drawing go?"
+          className="w-full bg-secondary text-foreground rounded-2xl p-4 text-sm outline-none resize-none"
+          style={{ fontFamily: "'Inter', sans-serif", minHeight: "100px", maxHeight: "200px" }}
+        />
       </div>
 
       {/* Drive destination */}

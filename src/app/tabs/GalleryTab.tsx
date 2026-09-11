@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, BookOpen, X, Calendar, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Search, BookOpen, X, Calendar, ChevronLeft, ChevronRight, RotateCcw, MessageSquare } from "lucide-react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import {
   TransformWrapper,
@@ -39,6 +39,7 @@ export function GalleryTab() {
   const [dragY, setDragY] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [uiVisible, setUiVisible] = useState(true);
+  const [remarksModalOpen, setRemarksModalOpen] = useState(false);
 
   const scaleRef = useRef(1);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -110,6 +111,7 @@ export function GalleryTab() {
     setActiveMediaIndex(0);
     setUiVisible(true);
     setEditTagsOpen(false);
+    setRemarksModalOpen(false);
     scaleRef.current = 1;
     draggingRef.current = false;
     dragYRef.current = 0;
@@ -123,6 +125,7 @@ export function GalleryTab() {
       setZoomed(false);
       setActiveMediaIndex(0);
       setUiVisible(true);
+      setRemarksModalOpen(false);
       scaleRef.current = 1;
     },
     [filtered.length, selectedIndex],
@@ -615,13 +618,27 @@ export function GalleryTab() {
                     {activeMediaIndex === 0 ? selected.title : imageSupplements[activeMediaIndex - 1]?.name || selected.title}
                   </p>
                 </div>
-                <button
-                  onClick={close}
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors hover:bg-red-500/40"
-                  style={{ background: "rgba(239, 68, 68, 0.2)" }}
-                >
-                  <X size={18} color="#fca5a5" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {selected.remarks && (
+                    <button
+                      onClick={(e) => {
+                         e.stopPropagation();
+                         setRemarksModalOpen(true);
+                      }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-white/20"
+                      style={{ background: "rgba(255, 255, 255, 0.1)" }}
+                    >
+                      <MessageSquare size={18} color="#ffffff" />
+                    </button>
+                  )}
+                  <button
+                    onClick={close}
+                    className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-colors hover:bg-red-500/40"
+                    style={{ background: "rgba(239, 68, 68, 0.2)" }}
+                  >
+                    <X size={18} color="#fca5a5" />
+                  </button>
+                </div>
               </div>
 
               {/* Supplements Tab Row */}
@@ -836,6 +853,42 @@ export function GalleryTab() {
                     >
                       Save Changes
                     </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Remarks Modal */}
+            <AnimatePresence>
+              {remarksModalOpen && selected?.remarks && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute inset-0 z-[110] flex items-center justify-center p-4 bg-black/60"
+                  onClick={(e) => {
+                     e.stopPropagation();
+                     setRemarksModalOpen(false);
+                  }}
+                  onTouchStart={(e) => {
+                     e.stopPropagation();
+                  }}
+                >
+                  <div 
+                    className="bg-background w-full max-w-sm rounded-3xl p-5 flex flex-col gap-4 shadow-2xl max-h-[80vh]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex justify-between items-center shrink-0">
+                      <h3 className="text-lg font-bold flex items-center gap-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                         <MessageSquare size={18} /> Remarks
+                      </h3>
+                      <button onClick={() => setRemarksModalOpen(false)}><X size={20} className="text-muted-foreground" /></button>
+                    </div>
+                    <div className="overflow-y-auto pr-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <p className="text-sm text-foreground whitespace-pre-wrap select-text">
+                        {selected.remarks}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               )}
