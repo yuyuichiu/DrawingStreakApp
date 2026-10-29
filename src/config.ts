@@ -8,7 +8,7 @@ export const CONFIG = {
   DRIVE_FOLDER_PREFIX: "DrawingStreakApp",
   
   // Streak cutoff time in 24-hour format (e.g., 04:00 is 4 AM)
-  STREAK_CUTOFF_TIME: "04:00",
+  STREAK_CUTOFF_TIME: "06:30",
   
   // High-priority urgent alert time (e.g., 22:00 is 10 PM)
   URGENT_ALERT_TIME: "22:00",
